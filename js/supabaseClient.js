@@ -1,25 +1,27 @@
 // ==========================================================================
 // SUPABASE CLIENT INITIALIZER FOR BOOYAHCONNECT
 // ==========================================================================
-// Reads frontend-safe Supabase credentials from window.ENV defined in env.js.
-// Does NOT hardcode credentials or expose service-role secret keys.
+// Reads frontend-safe Supabase credentials from window.ENV (env.js / config.js).
+// Supports local development and production hosting (Vercel / GitHub Pages).
 
 (function () {
+  // Public frontend-safe fallback credentials for Vercel/Production deployments
+  const PUBLIC_SUPABASE_URL = "https://jewekqnxezsrvbssgujc.supabase.co";
+  const PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_diVDJW1b2lN1mj1drjdTaQ_4PMS2EXn";
+
   const env = window.ENV || {};
-  const supabaseUrl = env.SUPABASE_URL || "";
-  const supabaseAnonKey = env.SUPABASE_ANON_KEY || "";
+  
+  const supabaseUrl = (env.SUPABASE_URL && env.SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL_HERE")
+    ? env.SUPABASE_URL
+    : PUBLIC_SUPABASE_URL;
 
-  if (!supabaseUrl || supabaseUrl === "YOUR_SUPABASE_PROJECT_URL_HERE") {
-    console.warn("[Supabase] SUPABASE_URL is missing or using placeholder in env.js");
-  }
-
-  if (!supabaseAnonKey || supabaseAnonKey === "YOUR_SUPABASE_PUBLISHABLE_KEY_HERE") {
-    console.warn("[Supabase] SUPABASE_ANON_KEY is missing or using placeholder in env.js");
-  }
+  const supabaseAnonKey = (env.SUPABASE_ANON_KEY && env.SUPABASE_ANON_KEY !== "YOUR_SUPABASE_PUBLISHABLE_KEY_HERE")
+    ? env.SUPABASE_ANON_KEY
+    : PUBLIC_SUPABASE_ANON_KEY;
 
   window.getSupabaseClient = function () {
     if (typeof supabase !== "undefined" && supabase.createClient) {
-      if (!window._supabaseClientInstance && supabaseUrl && supabaseAnonKey && supabaseUrl !== "YOUR_SUPABASE_PROJECT_URL_HERE") {
+      if (!window._supabaseClientInstance && supabaseUrl && supabaseAnonKey) {
         window._supabaseClientInstance = supabase.createClient(supabaseUrl, supabaseAnonKey);
       }
       return window._supabaseClientInstance || null;

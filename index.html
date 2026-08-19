@@ -14,8 +14,11 @@
   <!-- Supabase JS SDK (v2 Client Library) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
-  <!-- Environment Configuration (Loads window.ENV) -->
-  <script src="env.js"></script>
+  <!-- Production Configuration (Works on Vercel / GitHub Pages) -->
+  <script src="config.js"></script>
+
+  <!-- Local Environment Configuration (Optional for Local Dev) -->
+  <script src="env.js" onerror="console.log('Local env.js not present, using config.js default')"></script>
 
   <!-- Supabase Client Configuration -->
   <script src="js/supabaseClient.js"></script>
