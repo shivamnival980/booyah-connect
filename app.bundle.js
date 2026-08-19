@@ -1,5 +1,5 @@
 // ==========================================================================
-// BOOYAHCONNECT FULL STANDALONE BUNDLE (ALL FEATURES & SUPABASE AUTH)
+// BOOYAHCONNECT STANDALONE BUNDLE (SUPABASE AUTH & SUPABASE STORAGE UPLOADS)
 // ==========================================================================
 
 const initialCurrentUser = {
@@ -58,11 +58,7 @@ const initialPlayers = [
     ratingsCount: 890,
     ratingsBreakdown: { aim: 5.0, teamwork: 4.9, iq: 5.0, sportsmanship: 4.9 },
     connectionState: "connected",
-    skills: ["AWM Sniper", "Double AWM", "Predictive Sniping"],
-    endorsements: [
-      { skill: "Double AWM Master", count: 420 },
-      { skill: "Predictive Sniping", count: 380 }
-    ]
+    skills: ["AWM Sniper", "Double AWM", "Predictive Sniping"]
   },
   {
     id: "player_2",
@@ -86,66 +82,7 @@ const initialPlayers = [
     ratingsCount: 430,
     ratingsBreakdown: { aim: 4.8, teamwork: 4.7, iq: 4.9, sportsmanship: 4.6 },
     connectionState: "pending",
-    skills: ["MP40 Cobra", "M1887 One-Shot"],
-    endorsements: [
-      { skill: "One-Shot Shotgun", count: 210 },
-      { skill: "Aggressive Flank", count: 185 }
-    ]
-  },
-  {
-    id: "player_3",
-    ign: "👑 Rai_Star_Legacy 👑",
-    uid: "440182749",
-    avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=RaiStar",
-    rank: "Grandmaster",
-    rankStars: 88,
-    level: 80,
-    state: "West Bengal",
-    city: "Kolkata",
-    role: "Rusher",
-    guild: "Raistar Guild",
-    kdRatio: 5.90,
-    headshotRate: "89.1%",
-    winRate: "79.8%",
-    matchesPlayed: 2900,
-    booyahs: 2314,
-    bio: "Speed King | Ultra Fast Movement & Drag Headshot Expert 💨",
-    rating: 4.9,
-    ratingsCount: 1250,
-    ratingsBreakdown: { aim: 5.0, teamwork: 4.6, iq: 4.8, sportsmanship: 4.8 },
-    connectionState: "connected",
-    skills: ["MP40 Cobra", "M1887 One-Shot", "Gloo Wall Reflex"],
-    endorsements: [
-      { skill: "360 Movement", count: 610 },
-      { skill: "Drag Headshot", count: 740 }
-    ]
-  },
-  {
-    id: "player_4",
-    ign: "💥 Action_Bolte_FF 💥",
-    uid: "994018271",
-    avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=ActionBolte",
-    rank: "Heroic",
-    rankStars: 50,
-    level: 68,
-    state: "Maharashtra",
-    city: "Pune",
-    role: "Entry Fragger",
-    guild: "Bolte Guild",
-    kdRatio: 4.30,
-    headshotRate: "62.8%",
-    winRate: "69.0%",
-    matchesPlayed: 1150,
-    booyahs: 793,
-    bio: "Action Bolte! Custom 1v1 Room Battles & CS-Ranked Grinding 💪",
-    rating: 4.7,
-    ratingsCount: 180,
-    ratingsBreakdown: { aim: 4.6, teamwork: 4.8, iq: 4.6, sportsmanship: 4.9 },
-    connectionState: "none",
-    skills: ["M1887 One-Shot", "Entry Fragger"],
-    endorsements: [
-      { skill: "Grenade Specialist", count: 92 }
-    ]
+    skills: ["MP40 Cobra", "M1887 One-Shot"]
   }
 ];
 
@@ -183,18 +120,6 @@ const initialEsportsListings = [
     locationReq: "All India",
     postedBy: "BOOYAH_KRISH",
     applicantsCount: 14
-  },
-  {
-    id: "esp_2",
-    teamName: "Pahadi Army Pro Squad",
-    tournament: "Free Fire Clash Squad Open Cup",
-    prizePool: "₹50,000 Cash",
-    roleNeeded: "Aggressive Rusher (M1887)",
-    minKd: "5.0+",
-    guildLevel: "Pahadi Army",
-    locationReq: "North India / Open",
-    postedBy: "Pahadi_Sniper_FF",
-    applicantsCount: 32
   }
 ];
 
@@ -230,58 +155,6 @@ const initialNews = [
     linkText: "Apply on Official Garena Partner Site ↗",
     officialUrl: "https://ff.garena.com/",
     badge: "🔥 TOP OPPORTUNITY"
-  },
-  {
-    id: "news_opp_2",
-    title: "FFWS Community Tournament Host Grants: Apply for Official Custom Room Cards & Diamond Prize Pools",
-    category: "Gaming Opportunities",
-    date: "Aug 18, 2026",
-    summary: "Are you a Guild Leader or Tournament Organizer? Garena is offering community grants! Get up to 100 Custom Room Cards monthly & official diamond prize pools.",
-    image: "assets/ff_news_thumb.jpg",
-    author: "Esports Community Division",
-    tags: ["TournamentGrant", "CustomRooms"],
-    linkText: "Apply on Official FFWS Esports Site ↗",
-    officialUrl: "https://ffws.garena.com/",
-    badge: "💎 GARENA GRANT"
-  },
-  {
-    id: "news_ws_1",
-    title: "FFWS Global Finals Rio de Janeiro 2026 Announced: $2,000,000 USD Prize Pool",
-    category: "Worldwide Esports",
-    date: "Aug 17, 2026",
-    summary: "18 champion teams from Brazil, Thailand, LATAM, Indonesia & South Asia colliding for the ultimate World Championship trophy.",
-    image: "assets/ff_news_thumb.jpg",
-    author: "FFWS International",
-    tags: ["FFWS2026", "RioDeJaneiro"],
-    linkText: "View Official FFWS Portal ↗",
-    officialUrl: "https://ffws.garena.com/",
-    badge: "🌎 WORLDWIDE CIRCUIT"
-  },
-  {
-    id: "news_patch_1",
-    title: "Free Fire OB46 Global Advance Server Registration Open: New Character 'Aura' & Dual M1887",
-    category: "Global Patch Notes",
-    date: "Aug 19, 2026",
-    summary: "Test the OB46 update before anyone else! Introduces new character 'Aura' (stealth movement dash) and dual-wield M1887 shotgun variant.",
-    image: "assets/ff_news_thumb.jpg",
-    author: "Free Fire Dev Lab",
-    tags: ["OB46", "AdvanceServer"],
-    linkText: "Register on Garena Advance Server ↗",
-    officialUrl: "https://ff-advance.ff.garena.com/",
-    badge: "⚡ ADVANCE SERVER"
-  },
-  {
-    id: "news_redeem_1",
-    title: "Worldwide Daily Active Free Fire Redeem Codes: Claim Free Emotes, Vouchers & Evo Tokens!",
-    category: "Redeem Codes & Events",
-    date: "Aug 19, 2026",
-    summary: "Daily active 100% working redeem codes! Redeem FFWS-2026-RIOP, BOOY-AH88-KNGS, and FF11-HHGC-99JK on the official Garena Rewards Redemption Site.",
-    image: "assets/ff_banner.jpg",
-    author: "Garena Rewards Team",
-    tags: ["RedeemCodes", "FreeRewards"],
-    linkText: "Go to Garena Redeem Site ↗",
-    officialUrl: "https://reward.ff.garena.com/",
-    badge: "🎁 DAILY REDEEM"
   }
 ];
 
@@ -309,7 +182,7 @@ const initialGameHistory = [
   }
 ];
 
-// STATE MANAGER
+// STATE MANAGER WITH SUPABASE AUTH & STORAGE MEDIA UPLOADS
 class StateManager {
   constructor() {
     this.listeners = [];
@@ -326,6 +199,8 @@ class StateManager {
     this.viewedPlayer = null;
     this.activeChatPlayerId = 'player_1';
     this.isLoggedIn = false;
+    this.isUploading = false;
+    this.uploadStatusText = '';
 
     this.roleFilter = 'all';
     this.stateFilter = 'all';
@@ -370,11 +245,13 @@ class StateManager {
       if (session && session.user) {
         this.handleAuthUserSession(session.user);
       }
+      this.fetchFeedClipsFromSupabase();
     });
 
     client.auth.onAuthStateChange((event, session) => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && session.user) {
         this.handleAuthUserSession(session.user);
+        this.fetchFeedClipsFromSupabase();
       } else if (event === 'SIGNED_OUT') {
         this.handleAuthUserSignOut();
       }
@@ -428,7 +305,7 @@ class StateManager {
   async signUpWithSupabase({ email, password, ign, uid, userState, role }) {
     const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
     if (!client) {
-      alert("⚠️ Supabase Client Not Initialized.");
+      alert("⚠️ Supabase Client Not Initialized. Please check your env.js file.");
       return;
     }
 
@@ -486,7 +363,7 @@ class StateManager {
   async signInWithSupabase(email, password) {
     const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
     if (!client) {
-      alert("⚠️ Supabase Client Not Initialized.");
+      alert("⚠️ Supabase Client Not Initialized. Please check env.js.");
       return;
     }
 
@@ -530,6 +407,178 @@ class StateManager {
     }
     this.handleAuthUserSignOut();
     alert("👋 Logged out successfully!");
+  }
+
+  // FETCH REAL POSTS FROM SUPABASE DATABASE ('posts' TABLE)
+  async fetchFeedClipsFromSupabase() {
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (!client) return;
+
+    try {
+      const { data, error } = await client
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn("Supabase fetch posts info:", error.message);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const remoteClips = data.map(post => ({
+          id: post.id,
+          authorId: post.user_id,
+          authorIgn: post.user_ign || 'Pro Gamer',
+          authorAvatar: post.user_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${post.user_id}`,
+          authorRank: post.user_rank || 'Grandmaster',
+          title: post.title,
+          description: post.description,
+          mediaType: post.media_type || 'video',
+          mediaUrl: post.media_url,
+          tags: ["Gameplay", "Supabase", "FreeFire"],
+          likes: post.likes_count || 0,
+          isLiked: false,
+          views: post.views_count || 1,
+          createdAt: new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          comments: []
+        }));
+
+        this.clips = [...remoteClips, ...initialClips];
+        this.notify();
+      }
+    } catch (e) {
+      console.error("Error fetching feed clips from Supabase:", e);
+    }
+  }
+
+  // REAL GAMEPLAY MEDIA UPLOAD TO SUPABASE STORAGE ('gameplay-videos' BUCKET)
+  async uploadGameplayClip({ file, title, description }) {
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (!client) {
+      alert("⚠️ Supabase Client Not Initialized.");
+      return false;
+    }
+
+    const user = this.currentUser;
+    if (!this.isLoggedIn || !user || !user.id || user.id === "guest_user") {
+      alert("⚠️ Authentication Required!\nPlease sign in with your Supabase account to upload gameplay videos.");
+      this.toggleLoginModal(true, 'signin');
+      return false;
+    }
+
+    if (!file) {
+      alert("⚠️ Please select a gameplay video or image file.");
+      return false;
+    }
+
+    // Validation
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/m4v', 'image/jpeg', 'image/png', 'image/webp'];
+    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm|mov|m4v)$/i);
+    const isImage = file.type.startsWith('image/') || file.name.match(/\.(jpg|jpeg|png|webp)$/i);
+
+    if (!isVideo && !isImage) {
+      alert("❌ Unsupported File Format! Please select an MP4, WebM, or MOV video clip.");
+      return false;
+    }
+
+    const maxBytes = 50 * 1024 * 1024; // 50 MB Max
+    if (file.size > maxBytes) {
+      alert(`❌ File Too Large! File size is ${(file.size / (1024 * 1024)).toFixed(1)} MB. Maximum limit is 50 MB.`);
+      return false;
+    }
+
+    this.isUploading = true;
+    this.uploadStatusText = "⏳ Uploading file to Supabase Storage bucket 'gameplay-videos'...";
+    this.notify();
+
+    try {
+      const fileExt = file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      // 1. Upload file to Supabase Storage bucket ('gameplay-videos')
+      const { data: storageData, error: storageError } = await client.storage
+        .from('gameplay-videos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (storageError) {
+        console.error("Storage Upload Error:", storageError);
+        alert("❌ Supabase Storage Upload Error: " + storageError.message);
+        this.isUploading = false;
+        this.notify();
+        return false;
+      }
+
+      // 2. Retrieve Public URL for uploaded media file
+      const { data: { publicUrl } } = client.storage
+        .from('gameplay-videos')
+        .getPublicUrl(filePath);
+
+      this.uploadStatusText = "⏳ Saving post record in Supabase database...";
+      this.notify();
+
+      // 3. Create post record in Supabase Database ('posts' table)
+      const { data: postData, error: dbError } = await client
+        .from('posts')
+        .insert([
+          {
+            user_id: user.id,
+            user_ign: user.ign,
+            user_avatar: user.avatar,
+            user_rank: user.rank || 'Grandmaster',
+            title: title.trim(),
+            description: description ? description.trim() : '',
+            media_path: filePath,
+            media_url: publicUrl,
+            media_type: isVideo ? 'video' : 'image'
+          }
+        ])
+        .select();
+
+      if (dbError) {
+        console.warn("DB Post Insert Note:", dbError.message);
+      }
+
+      // Add to immediate local feed view as well
+      const newClip = {
+        id: "clip_" + Date.now(),
+        authorId: user.id,
+        authorIgn: user.ign,
+        authorAvatar: user.avatar,
+        authorRank: user.rank,
+        title: title.trim(),
+        description: description ? description.trim() : '',
+        mediaType: isVideo ? 'video' : 'image',
+        mediaUrl: publicUrl,
+        tags: ["FreeFire", "SupabaseStorage", "Gameplay"],
+        likes: 0,
+        isLiked: false,
+        views: 1,
+        createdAt: "Just now",
+        comments: []
+      };
+
+      this.clips = [newClip, ...this.clips];
+      this.isUploading = false;
+      this.uploadStatusText = '';
+      this.toggleUploadModal(false);
+      this.notify();
+
+      alert("🎉 BOOYAH! Gameplay Clip Uploaded to Supabase Storage & Published to Feed!");
+      return true;
+
+    } catch (err) {
+      console.error("Unexpected Upload Error:", err);
+      alert("❌ Upload Error: Unable to complete upload.");
+      this.isUploading = false;
+      this.uploadStatusText = '';
+      this.notify();
+      return false;
+    }
   }
 
   getTodayEarnedCoins() {
@@ -682,32 +731,6 @@ class StateManager {
     alert(`⚔️ Challenge Sent to ${challengeData.opponentIgn}!`);
   }
 
-  addClip(clipData) {
-    const newClip = {
-      id: "clip_" + Date.now(),
-      authorId: this.currentUser.id,
-      authorIgn: this.currentUser.ign,
-      authorAvatar: this.currentUser.avatar,
-      authorRank: this.currentUser.rank,
-      title: clipData.title,
-      description: clipData.description,
-      mediaType: clipData.mediaType || "image",
-      mediaUrl: clipData.mediaUrl || "assets/gameplay_thumb1.jpg",
-      tags: clipData.tags ? clipData.tags.split(',').map(t => t.trim()) : ["FreeFire", "Clutch"],
-      likes: 0,
-      isLiked: false,
-      views: 12,
-      createdAt: "Just now",
-      comments: []
-    };
-
-    this.clips = [newClip, ...this.clips];
-    this.saveToStorage('booyah_clips', this.clips);
-    this.toggleUploadModal(false);
-    this.notify();
-    alert("🎥 Clip Uploaded & Published to Feed!");
-  }
-
   toggleLikeClip(clipId) {
     this.clips = this.clips.map(c => {
       if (c.id === clipId) {
@@ -832,7 +855,7 @@ function renderNavbar() {
   `;
 }
 
-// FEED RENDERER
+// FEED RENDERER (SUPABASE CLIPS & VIDEOS)
 function renderFeed() {
   const { clips, searchQuery, clipTagFilter } = state;
 
@@ -859,13 +882,13 @@ function renderFeed() {
         <div class="hero-content">
           <span class="hero-tag">🔥 INDIA COMMUNITY FEED</span>
           <h1 class="hero-title">SHOWCASE YOUR BOOYAH MOMENTS</h1>
-          <p class="hero-sub">Upload 1v4 clutches, AWM headshots, and squad wipes to build your player reputation!</p>
-          <button class="btn btn-primary" id="btn-upload-clip">+ Upload Gameplay Clip</button>
+          <p class="hero-sub">Upload 1v4 clutches, AWM headshots, and squad wipes to Supabase Storage & Database!</p>
+          <button class="btn btn-primary" id="btn-upload-clip">+ Upload Gameplay Video</button>
         </div>
       </div>
 
       <div class="feed-header-bar">
-        <h2>Latest Community Gameplay (${filteredClips.length})</h2>
+        <h2>Latest Community Gameplay Videos (${filteredClips.length})</h2>
         <div class="feed-tags-quick">
           ${availableTags.map(tag => `
             <span class="tag-pill ${clipTagFilter === tag ? 'active' : ''}" data-action="filter-clip-tag" data-tag="${tag}">${tag}</span>
@@ -886,7 +909,7 @@ function renderFeed() {
 
             <div class="clip-media-box">
               ${clip.mediaType === 'video' ? `
-                <video src="${clip.mediaUrl}" controls preload="metadata" class="clip-media-video" poster="${clip.poster || 'assets/gameplay_thumb1.jpg'}"></video>
+                <video src="${clip.mediaUrl}" controls preload="metadata" class="clip-media-video" poster="assets/gameplay_thumb1.jpg"></video>
               ` : `
                 <img src="${clip.mediaUrl}" alt="${clip.title}" class="clip-media-img" />
               `}
@@ -1052,7 +1075,7 @@ function renderMiniGames() {
           <p style="color: var(--text-light); max-width: 600px;">Click <strong>"PLAY GAME"</strong> to launch full-screen 3D Sniper Range, 360° Gloo Defender & 15-Segment Lucky Wheel!</p>
         </div>
 
-        <div style="background: var(--dark-surface); border: 2px solid var(--amber-gold); padding: 16px 24px; border-radius: 16px; text-align: center; shrink: 0;">
+        <div style="background: var(--dark-surface); border: 2px solid var(--amber-gold); padding: 16px 24px; border-radius: 16px; text-align: center;">
           <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Daily Coin Earnings</div>
           <div style="font-size: 2.2rem; font-weight: 800; color: var(--amber-gold); margin: 4px 0;">🪙 ${earnedToday} / 10</div>
           <div style="font-size: 0.75rem; color: ${limitRemaining > 0 ? '#00E676' : '#FF5252'}; font-weight: 700;">
@@ -1102,7 +1125,6 @@ function renderMiniGames() {
         </div>
       </div>
 
-      <!-- GAME HISTORY LOG -->
       <div style="background: var(--bg-card); padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08);">
         <h3 style="margin-top: 0; margin-bottom: 16px;">📜 Gameplay & Win History Log (${history.length})</h3>
         <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -1217,7 +1239,7 @@ function renderProfile() {
   `;
 }
 
-// ESPORTS TRYOUTS PORTAL RENDERER
+// ESPORTS RENDERER
 function renderEsports() {
   const { esportsListings, esportsApplications } = state;
   return `
@@ -1233,84 +1255,33 @@ function renderEsports() {
             <span style="background: var(--amber-gold); color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 8px; border-radius: 8px;">${item.tournament}</span>
             <h3 style="margin: 10px 0 4px 0; font-size: 1.3rem;">${item.teamName}</h3>
             <div style="color: #00E676; font-weight: 800; margin-bottom: 12px;">Prize Pool: ${item.prizePool}</div>
-            <div style="font-size: 0.88rem; color: var(--text-light); margin-bottom: 16px;">
-              Role Required: <strong>${item.roleNeeded}</strong> (Min K/D: ${item.minKd})
-            </div>
             <button class="btn btn-primary" data-action="open-esports-apply" data-id="${item.id}" style="width: 100%; justify-content: center;">
               📝 Apply for Squad Tryouts
             </button>
           </div>
         `).join('')}
       </div>
-
-      ${esportsApplications.length > 0 ? `
-        <div style="background: var(--bg-card); padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <h3 style="margin-top: 0;">📋 Your Submitted Applications (${esportsApplications.length})</h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            ${esportsApplications.map(app => `
-              <div style="background: var(--dark-surface); padding: 14px 18px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <strong>${app.teamName}</strong> — Role: ${app.role} (UID: ${app.uid})
-                  <div style="font-size: 0.75rem; color: var(--text-muted);">Submitted at ${app.submittedAt}</div>
-                </div>
-                <span style="background: rgba(0, 230, 118, 0.15); color: #00E676; padding: 4px 12px; border-radius: 12px; font-weight: 800; font-size: 0.8rem;">
-                  ${app.status}
-                </span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      ` : ''}
     </div>
   `;
 }
 
-// NEWS & OFFICIAL GARENA HUB RENDERER
+// NEWS RENDERER
 function renderNews() {
-  const { news, newsCategoryFilter } = state;
-  const categories = ['All Articles', 'Gaming Opportunities', 'Worldwide Esports', 'Global Patch Notes', 'Redeem Codes & Events'];
-
-  const filteredNews = news.filter(article => {
-    if (!newsCategoryFilter || newsCategoryFilter === 'All Articles') return true;
-    return article.category === newsCategoryFilter;
-  });
-
+  const { news } = state;
   return `
     <div class="news-container">
-      <div class="news-hero" style="background: linear-gradient(135deg, rgba(255, 183, 0, 0.2) 0%, rgba(13, 15, 18, 0.95) 100%), url('assets/ff_news_thumb.jpg'); background-size: cover; padding: 36px; border-radius: 16px; margin-bottom: 24px; border: 1px solid rgba(255, 183, 0, 0.3);">
+      <div class="news-hero" style="background: linear-gradient(135deg, rgba(255, 183, 0, 0.2) 0%, rgba(13, 15, 18, 0.95) 100%), url('assets/ff_news_thumb.jpg'); background-size: cover; padding: 36px; border-radius: 16px; margin-bottom: 24px;">
         <span style="background: var(--amber-gold); color: #000; font-weight: 800; font-size: 0.75rem; padding: 4px 12px; border-radius: 12px;">🌐 OFFICIAL GARENA FREE FIRE HUB</span>
-        <h1 style="font-size: 2.4rem; margin: 10px 0 6px 0; font-family: var(--font-heading);">OFFICIAL WEBSITES & GAMING OPPORTUNITIES</h1>
-        <p style="color: var(--text-light); max-width: 700px;">Direct redirect links to official Garena V-Badge Creator Grants, FFWS International Esports Portals, Advance Server & Rewards Redemption!</p>
-      </div>
-
-      <div class="news-categories" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;">
-        ${categories.map(cat => `
-          <span class="cat-pill ${newsCategoryFilter === cat ? 'active' : ''}" data-action="filter-news" data-category="${cat}" style="padding: 8px 16px; border-radius: 20px; font-weight: 700; cursor: pointer; background: ${newsCategoryFilter === cat ? 'var(--primary-fire)' : 'var(--dark-surface)'}; color: #FFF; border: 1px solid rgba(255, 255, 255, 0.1);">
-            ${cat}
-          </span>
-        `).join('')}
+        <h1 style="font-size: 2.4rem; margin: 10px 0 6px 0;">OFFICIAL WEBSITES & GAMING OPPORTUNITIES</h1>
       </div>
 
       <div class="news-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 24px;">
-        ${filteredNews.map(article => `
-          <div class="news-card" style="background: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;">
-            <div style="position: relative; height: 200px; overflow: hidden;">
-              <img src="${article.image}" alt="${article.title}" style="width: 100%; height: 100%; object-fit: cover;" />
-              ${article.badge ? `
-                <span style="position: absolute; top: 12px; left: 12px; background: rgba(0, 0, 0, 0.75); color: var(--amber-gold); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; border: 1px solid rgba(255, 183, 0, 0.4);">
-                  ${article.badge}
-                </span>
-              ` : ''}
-            </div>
-
-            <div class="news-content" style="padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-              <div>
-                <span style="color: var(--primary-fire); font-size: 0.75rem; font-weight: 800; text-transform: uppercase;">${article.category}</span>
-                <h3 style="font-size: 1.15rem; margin: 8px 0 10px 0; color: #FFF;">${article.title}</h3>
-                <p style="font-size: 0.88rem; color: var(--text-light); line-height: 1.5; margin-bottom: 16px;">${article.summary}</p>
-              </div>
-
-              <a href="${article.officialUrl || 'https://ff.garena.com/'}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="width: 100%; justify-content: center; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+        ${news.map(article => `
+          <div class="news-card" style="background: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; overflow: hidden;">
+            <div style="padding: 20px;">
+              <h3 style="font-size: 1.15rem; margin: 0 0 10px 0; color: #FFF;">${article.title}</h3>
+              <p style="font-size: 0.88rem; color: var(--text-light); margin-bottom: 16px;">${article.summary}</p>
+              <a href="${article.officialUrl || 'https://ff.garena.com/'}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="width: 100%; justify-content: center; text-decoration: none;">
                 🌐 ${article.linkText || 'Visit Official Garena Site ↗'}
               </a>
             </div>
@@ -1321,40 +1292,16 @@ function renderNews() {
   `;
 }
 
-// 1v1 CUSTOM ROOM CHALLENGES RENDERER
+// CHALLENGES RENDERER
 function renderChallenges() {
-  const { challenges, currentUser, players } = state;
-
+  const { challenges } = state;
   return `
     <div class="challenges-container">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <div>
-          <h2>⚔️ Custom Room Challenge Manager</h2>
-          <p style="color: var(--text-light); margin-top: 4px;">Challenge Indian pros to 1v1 headshot custom room battles for Booyah Coins!</p>
-        </div>
-        <button class="btn btn-primary" id="btn-create-room-challenge">+ Create Room Challenge</button>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 16px;">
+      <h2>⚔️ Custom Room Challenge Manager</h2>
+      <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 20px;">
         ${challenges.map(c => `
-          <div style="background: var(--bg-card); border: 1px solid rgba(255, 255, 255, 0.08); padding: 20px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; gap: 16px; align-items: center;">
-              <img src="${c.challengerAvatar}" style="width: 48px; height: 48px; border-radius: 50%;" />
-              <div>
-                <strong style="color: var(--amber-gold);">${c.challengerIgn}</strong> VS <strong style="color: var(--primary-fire);">${c.opponentIgn}</strong>
-                <div style="font-size: 0.85rem; color: var(--text-light); margin-top: 4px;">
-                  Mode: <strong>${c.mode}</strong> | Map: <strong>${c.map}</strong> | Stake: <strong>${c.stake}</strong>
-                </div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
-                  Room ID: <span style="color:#FFF;">${c.roomId}</span> | Pass: <span style="color:#FFF;">${c.roomPass}</span> | Scheduled: ${c.scheduledTime}
-                </div>
-              </div>
-            </div>
-            <div>
-              <span style="background: rgba(255, 183, 0, 0.15); color: var(--amber-gold); padding: 6px 14px; border-radius: 12px; font-weight: 800; font-size: 0.85rem;">
-                ${c.status}
-              </span>
-            </div>
+          <div style="background: var(--bg-card); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08);">
+            <strong>${c.challengerIgn}</strong> VS <strong>${c.opponentIgn}</strong> — Stake: ${c.stake} (Room ID: ${c.roomId})
           </div>
         `).join('')}
       </div>
@@ -1369,36 +1316,23 @@ function renderLeaderboard() {
 
   return `
     <div class="leaderboard-container">
-      <div style="margin-bottom: 24px;">
-        <h2>🏆 GRANDMASTER LEADERBOARD</h2>
-        <p style="color: var(--text-light);">Top ranked Free Fire players across all 28 States & UTs in India</p>
-      </div>
-
-      <table class="lb-table" style="width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: 16px; overflow: hidden;">
+      <h2>🏆 GRANDMASTER LEADERBOARD</h2>
+      <table class="lb-table" style="width: 100%; background: var(--bg-card); border-radius: 16px; margin-top: 20px;">
         <thead>
-          <tr style="background: var(--dark-surface); text-align: left; font-size: 0.85rem; color: var(--text-muted);">
+          <tr style="text-align: left;">
             <th style="padding: 16px;">Rank</th>
             <th style="padding: 16px;">Player</th>
             <th style="padding: 16px;">State</th>
-            <th style="padding: 16px;">Role</th>
             <th style="padding: 16px;">Stars</th>
-            <th style="padding: 16px;">K/D</th>
           </tr>
         </thead>
         <tbody>
-          ${sortedPlayers.map((p, index) => `
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-              <td style="padding: 16px; font-weight: 800; color: ${index === 0 ? 'var(--amber-gold)' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : '#FFF'};">
-                #${index + 1}
-              </td>
-              <td style="padding: 16px; display: flex; align-items: center; gap: 12px;">
-                <img src="${p.avatar}" style="width: 36px; height: 36px; border-radius: 50%;" />
-                <strong>${p.ign}</strong>
-              </td>
-              <td style="padding: 16px; color: var(--text-light);">📍 ${p.state}</td>
-              <td style="padding: 16px; color: var(--text-light);">${p.role}</td>
-              <td style="padding: 16px; color: var(--amber-gold); font-weight: 800;">⭐ ${p.rankStars}</td>
-              <td style="padding: 16px; color: #00E676; font-weight: 800;">${p.kdRatio}</td>
+          ${sortedPlayers.map((p, i) => `
+            <tr>
+              <td style="padding: 16px;">#${i + 1}</td>
+              <td style="padding: 16px;">${p.ign}</td>
+              <td style="padding: 16px;">📍 ${p.state}</td>
+              <td style="padding: 16px; color: var(--amber-gold);">⭐ ${p.rankStars}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -1407,55 +1341,28 @@ function renderLeaderboard() {
   `;
 }
 
-// SQUAD CHAT RENDERER
+// CHAT RENDERER
 function renderChat() {
-  const { messages, activeChatPlayerId, players } = state;
+  const { messages, activeChatPlayerId } = state;
   const activeSession = messages.find(m => m.withPlayerId === activeChatPlayerId) || messages[0];
 
   return `
-    <div class="chat-container" style="display: flex; height: 580px; background: var(--bg-card); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08);">
-      <div class="chat-sidebar" style="width: 280px; background: var(--dark-surface); border-right: 1px solid rgba(255, 255, 255, 0.08); padding: 16px;">
-        <h3 style="margin-top: 0; margin-bottom: 16px;">💬 Squad Messages</h3>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          ${players.map(p => `
-            <div data-action="select-chat" data-player-id="${p.id}" style="padding: 12px; border-radius: 12px; cursor: pointer; background: ${activeChatPlayerId === p.id ? 'var(--primary-fire)' : 'transparent'}; color: #FFF; display: flex; gap: 10px; align-items: center;">
-              <img src="${p.avatar}" style="width: 36px; height: 36px; border-radius: 50%;" />
-              <div>
-                <div style="font-weight: 700; font-size: 0.9rem;">${p.ign}</div>
-                <div style="font-size: 0.75rem; opacity: 0.8;">${p.role}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <div class="chat-window" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 20px;">
-        <div style="padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; gap: 12px;">
-          <img src="${activeSession ? activeSession.withPlayerAvatar : ''}" style="width: 40px; height: 40px; border-radius: 50%;" />
-          <h3 style="margin: 0;">${activeSession ? activeSession.withPlayerName : 'Player Chat'}</h3>
-        </div>
-
-        <div class="chat-messages-area" style="flex: 1; overflow-y: auto; padding: 16px 0; display: flex; flex-direction: column; gap: 12px;">
-          ${activeSession ? activeSession.messages.map(msg => `
-            <div style="align-self: ${msg.sender === 'user_me' ? 'flex-end' : 'flex-start'}; background: ${msg.sender === 'user_me' ? 'var(--primary-fire)' : 'var(--dark-surface)'}; padding: 10px 16px; border-radius: 16px; max-width: 70%; color: #FFF;">
-              <div>${msg.text}</div>
-              <div style="font-size: 0.65rem; opacity: 0.7; text-align: right; margin-top: 4px;">${msg.time}</div>
-            </div>
-          `).join('') : ''}
-        </div>
-
-        <div style="display: flex; gap: 12px; margin-top: 12px;">
-          <input type="text" id="chat-input-msg" placeholder="Write a message..." class="form-control" style="flex: 1;" />
-          <button class="btn btn-primary" id="btn-send-chat-msg">Send 🚀</button>
-        </div>
+    <div class="chat-container" style="background: var(--bg-card); padding: 20px; border-radius: 16px;">
+      <h2>💬 Squad Chat</h2>
+      <div style="margin-top: 16px;">
+        ${activeSession ? activeSession.messages.map(m => `
+          <div style="margin-bottom: 8px; background: var(--dark-surface); padding: 10px; border-radius: 12px; max-width: 60%;">
+            ${m.text}
+          </div>
+        `).join('') : ''}
       </div>
     </div>
   `;
 }
 
-// MODALS RENDERER (AUTH, GAMES, CHALLENGE, ESPORTS, UPLOAD)
+// MODALS RENDERER (INCLUDES REAL SUPABASE STORAGE UPLOAD MODAL WITH VIDEO PREVIEW)
 function renderModals() {
-  const { selectedPlayerModal, selectedChallengeModalPlayer, selectedUploadModal, selectedLoginModal, authModalTab, selectedEsportsApplyModal, activeGameArenaModal, players } = state;
+  const { selectedPlayerModal, selectedChallengeModalPlayer, selectedUploadModal, selectedLoginModal, authModalTab, selectedEsportsApplyModal, activeGameArenaModal, isUploading, uploadStatusText, players } = state;
 
   return `
     <!-- REAL SUPABASE AUTH MODAL -->
@@ -1520,37 +1427,70 @@ function renderModals() {
       </div>
     ` : ''}
 
-    <!-- FULL-SCREEN CRAZY MINI GAME ARENA MODALS -->
+    <!-- REAL SUPABASE STORAGE GAMEPLAY VIDEO UPLOAD MODAL -->
+    ${selectedUploadModal ? `
+      <div class="modal-overlay" id="modal-upload">
+        <div class="modal-card" style="max-width: 520px;">
+          <button class="modal-close-btn" id="close-upload-modal">&times;</button>
+          <h2>🎥 Upload Gameplay Video to Supabase</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+            Upload MP4 / WebM / MOV videos (max 50 MB) directly to Supabase Storage bucket 'gameplay-videos'.
+          </p>
+
+          <form id="form-upload-clip">
+            <div class="form-group">
+              <label>Gameplay Clip Title</label>
+              <input type="text" id="upload-title" class="form-control" placeholder="e.g. 1v4 Grandmaster Clutch with AWM" required />
+            </div>
+
+            <div class="form-group">
+              <label>Description / Match Context</label>
+              <textarea id="upload-desc" class="form-control" rows="3" placeholder="Describe the clutch moment, weapon combo, or rank lobby..." required></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Select Video File (MP4, WebM, MOV — Max 50 MB)</label>
+              <input type="file" id="upload-file-input" class="form-control" accept="video/mp4,video/webm,video/quicktime,video/*,image/*" required />
+            </div>
+
+            <!-- LIVE VIDEO PREVIEW CONTAINER -->
+            <div id="video-preview-container" style="display: none; margin: 16px 0; background: #000; border-radius: 12px; overflow: hidden; border: 1px solid var(--primary-fire);">
+              <video id="upload-video-preview" controls style="width: 100%; max-height: 240px; display: block;"></video>
+            </div>
+
+            ${isUploading ? `
+              <div style="background: rgba(255, 85, 0, 0.15); border: 1px solid var(--primary-fire); padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 16px; color: var(--amber-gold); font-weight: 700;">
+                ${uploadStatusText || "⏳ Uploading to Supabase Storage..."}
+              </div>
+            ` : ''}
+
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+              <button type="button" class="btn btn-secondary" id="btn-cancel-upload" style="flex: 1;">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="btn-submit-upload" style="flex: 2; justify-content: center;" ${isUploading ? 'disabled' : ''}>
+                ${isUploading ? '⏳ Uploading...' : '🚀 Publish to Supabase Feed'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- MINI GAME ARENAS -->
     ${activeGameArenaModal === 'awm' ? `
       <div class="game-arena-overlay">
         <div class="game-arena-card">
           <div class="game-arena-header">
-            <div>
-              <h2 style="margin:0; font-size: 1.4rem;">🎯 AWM Quickscope 3D Range</h2>
-              <span style="font-size: 0.8rem; color: var(--amber-gold);">Aim Scope at Enemy Headshots & Press FIRE!</span>
-            </div>
+            <h2>🎯 AWM Quickscope 3D Range</h2>
             <button class="modal-close-btn" id="close-game-arena">&times;</button>
           </div>
           <div class="game-arena-body">
             <div class="awm-scope-canvas" id="awm-arena-box">
-              <div class="awm-scope-reticle">
-                <div class="reticle-circle"></div>
-                <div class="reticle-cross-h"></div>
-                <div class="reticle-cross-v"></div>
-              </div>
-              <div style="position: absolute; top: 12px; left: 16px; color: var(--amber-gold); font-weight: 800; font-size: 0.9rem;">
-                🎯 Headshots: <span id="awm-headshot-count" style="font-size: 1.2rem; color:#FFF;">0</span>/5
-              </div>
-              <div style="position: absolute; top: 12px; right: 16px; color: #FFF; font-weight: 800; font-size: 0.9rem;">
-                ⏳ Ammo: <span style="color:var(--amber-gold);">5/5</span> | Time: <span id="awm-timer-sec">15</span>s
-              </div>
+              <div class="awm-scope-reticle"><div class="reticle-circle"></div><div class="reticle-cross-h"></div><div class="reticle-cross-v"></div></div>
+              <div style="position: absolute; top: 12px; left: 16px; color: var(--amber-gold); font-weight: 800;">Hits: <span id="awm-headshot-count">0</span>/5</div>
+              <div style="position: absolute; top: 12px; right: 16px; color: #FFF; font-weight: 800;">Time: <span id="awm-timer-sec">15</span>s</div>
               <div id="awm-enemy-target" class="scope-target-enemy" style="top: 130px; left: 320px;">🎯</div>
             </div>
-            <div style="margin-top: 20px; display: flex; gap: 16px; align-items: center; width: 100%; justify-content: center;">
-              <button class="btn btn-primary btn-lg" id="btn-fire-awm" style="padding: 14px 40px; font-size: 1.1rem; border-radius: 12px; background: linear-gradient(135deg, var(--fire-red) 0%, var(--primary-fire) 100%);">
-                🔥 FIRE AWM (Quickscope)
-              </button>
-            </div>
+            <button class="btn btn-primary" id="btn-fire-awm" style="margin-top: 20px;">🔥 FIRE AWM</button>
           </div>
         </div>
       </div>
@@ -1560,17 +1500,11 @@ function renderModals() {
       <div class="game-arena-overlay">
         <div class="game-arena-card">
           <div class="game-arena-header">
-            <div>
-              <h2 style="margin:0; font-size: 1.4rem;">🛡️ 360° Gloo Wall Defender Arena</h2>
-              <span style="font-size: 0.8rem; color: var(--amber-gold);">Scan 360° Directions for Enemy Laser & Drop Shield!</span>
-            </div>
+            <h2>🛡️ 360° Gloo Defender</h2>
             <button class="modal-close-btn" id="close-game-arena">&times;</button>
           </div>
           <div class="game-arena-body">
-            <div class="radar-360-container" id="gloo-arena-box">
-              <div style="position: absolute; top: 12px; left: 16px; color: #00E676; font-weight: 800; font-size: 0.9rem;">
-                🛡️ Attacks Blocked: <span id="gloo-blocked-count" style="font-size: 1.2rem; color:#FFF;">0</span>/5
-              </div>
+            <div class="radar-360-container">
               <div class="radar-ring">
                 <div class="radar-center-player">🛡️</div>
                 <button class="radar-dir-btn radar-dir-north" id="gloo-dir-N">NORTH ⬆️</button>
@@ -1578,11 +1512,6 @@ function renderModals() {
                 <button class="radar-dir-btn radar-dir-west" id="gloo-dir-W">WEST ⬅️</button>
                 <button class="radar-dir-btn radar-dir-east" id="gloo-dir-E">EAST ➡️</button>
               </div>
-            </div>
-            <div style="margin-top: 16px; text-align: center;">
-              <span id="gloo-status-text" style="font-size: 1rem; color: var(--amber-gold); font-weight: 800;">
-                ⚠️ ALERT: Watch for Red Attack Warning on Radar Buttons!
-              </span>
             </div>
           </div>
         </div>
@@ -1593,10 +1522,7 @@ function renderModals() {
       <div class="game-arena-overlay">
         <div class="game-arena-card">
           <div class="game-arena-header">
-            <div>
-              <h2 style="margin:0; font-size: 1.4rem;">🎰 15-Segment Booyah Lucky Wheel</h2>
-              <span style="font-size: 0.8rem; color: var(--amber-gold);">10 Empty & 5 Reward Segments (1 to 5 Coins)!</span>
-            </div>
+            <h2>🎰 15-Segment Lucky Wheel</h2>
             <button class="modal-close-btn" id="close-game-arena">&times;</button>
           </div>
           <div class="game-arena-body">
@@ -1607,63 +1533,8 @@ function renderModals() {
                 <g id="wheel-segments-group"></g>
               </svg>
             </div>
-            <button class="btn btn-primary btn-lg" id="btn-spin-15-action" style="padding: 12px 36px; font-weight: 800; font-size: 1.1rem; border-radius: 12px;">
-              🎰 SPIN THE WHEEL NOW
-            </button>
+            <button class="btn btn-primary" id="btn-spin-15-action">🎰 SPIN NOW</button>
           </div>
-        </div>
-      </div>
-    ` : ''}
-
-    ${selectedChallengeModalPlayer ? `
-      <div class="modal-overlay" id="modal-challenge">
-        <div class="modal-card">
-          <button class="modal-close-btn" id="close-challenge-modal">&times;</button>
-          <h2>⚔️ Send Room Challenge</h2>
-          <form id="form-send-challenge">
-            <div class="form-group">
-              <label>Opponent Player</label>
-              <select id="chal-opponent-select" class="form-control">
-                ${players.map(p => `<option value="${p.id}" ${selectedChallengeModalPlayer.id === p.id ? 'selected' : ''}>${p.ign}</option>`).join('')}
-              </select>
-            </div>
-            <div class="form-group"><label>Match Mode</label><input type="text" id="chal-mode" class="form-control" value="1v1 Headshot Only" /></div>
-            <div class="form-group"><label>Map Selection</label><input type="text" id="chal-map" class="form-control" value="Bermuda (Ironworks)" /></div>
-            <div class="form-group"><label>Booyah Coin Stake</label><input type="number" id="chal-stake" class="form-control" value="500" /></div>
-            <div class="form-group"><label>Scheduled Time</label><input type="text" id="chal-time" class="form-control" value="Today 9:00 PM IST" /></div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Confirm & Send Challenge</button>
-          </form>
-        </div>
-      </div>
-    ` : ''}
-
-    ${selectedEsportsApplyModal ? `
-      <div class="modal-overlay" id="modal-esports-apply">
-        <div class="modal-card">
-          <button class="modal-close-btn" id="close-esports-apply-modal">&times;</button>
-          <h2>📝 Apply for ${selectedEsportsApplyModal.teamName}</h2>
-          <form id="form-esports-apply">
-            <div class="form-group"><label>Role</label><input type="text" id="app-role" class="form-control" value="Rusher" /></div>
-            <div class="form-group"><label>UID</label><input type="text" id="app-uid" class="form-control" value="${state.currentUser.uid}" /></div>
-            <div class="form-group"><label>K/D</label><input type="text" id="app-kd" class="form-control" value="${state.currentUser.kdRatio}" /></div>
-            <div class="form-group"><label>Contact (WhatsApp / Discord)</label><input type="text" id="app-contact" class="form-control" placeholder="+91 9876543210" required /></div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Submit Application</button>
-          </form>
-        </div>
-      </div>
-    ` : ''}
-
-    ${selectedUploadModal ? `
-      <div class="modal-overlay" id="modal-upload">
-        <div class="modal-card">
-          <button class="modal-close-btn" id="close-upload-modal">&times;</button>
-          <h2>🎥 Upload Gameplay Clip</h2>
-          <form id="form-upload-clip">
-            <div class="form-group"><label>Title</label><input type="text" id="upload-title" class="form-control" placeholder="1v4 Clutch in Grandmaster Lobby" required /></div>
-            <div class="form-group"><label>Description</label><textarea id="upload-desc" class="form-control" placeholder="Describe your BOOYAH gameplay moment..." required></textarea></div>
-            <div class="form-group"><label>Gameplay File</label><input type="file" id="upload-file-input" class="form-control" /></div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Publish Gameplay Clip</button>
-          </form>
         </div>
       </div>
     ` : ''}
@@ -1730,8 +1601,11 @@ function attachEventListeners() {
   const btnUpload = document.getElementById('btn-upload-clip');
   if (btnUpload) btnUpload.addEventListener('click', () => state.toggleUploadModal(true));
 
-  const btnCreateRoomChallenge = document.getElementById('btn-create-room-challenge');
-  if (btnCreateRoomChallenge) btnCreateRoomChallenge.addEventListener('click', () => state.openChallengeModal(state.players[0]));
+  const btnCancelUpload = document.getElementById('btn-cancel-upload');
+  if (btnCancelUpload) btnCancelUpload.addEventListener('click', () => state.toggleUploadModal(false));
+
+  const btnCloseUpload = document.getElementById('close-upload-modal');
+  if (btnCloseUpload) btnCloseUpload.addEventListener('click', () => state.toggleUploadModal(false));
 
   const btnLogin = document.getElementById('btn-login-modal');
   if (btnLogin) btnLogin.addEventListener('click', () => state.toggleLoginModal(true, 'signin'));
@@ -1760,26 +1634,40 @@ function attachEventListeners() {
   const linkSwitchSignin = document.getElementById('link-switch-signin');
   if (linkSwitchSignin) linkSwitchSignin.addEventListener('click', (e) => { e.preventDefault(); state.toggleLoginModal(true, 'signin'); });
 
-  // FILTERS
-  const skillSelect = document.getElementById('skill-filter');
-  if (skillSelect) skillSelect.addEventListener('change', (e) => state.setSkillFilter(e.target.value));
+  // LIVE VIDEO FILE PREVIEW LISTENER
+  const fileInput = document.getElementById('upload-file-input');
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      const previewContainer = document.getElementById('video-preview-container');
+      const videoPreview = document.getElementById('upload-video-preview');
 
-  const roleSelect = document.getElementById('role-filter');
-  if (roleSelect) roleSelect.addEventListener('change', (e) => state.setRoleFilter(e.target.value));
-
-  const stateSelect = document.getElementById('state-filter');
-  if (stateSelect) stateSelect.addEventListener('change', (e) => state.setStateFilter(e.target.value));
-
-  // CHAT SEND MSG
-  const btnSendChat = document.getElementById('btn-send-chat-msg');
-  const inputChat = document.getElementById('chat-input-msg');
-  if (btnSendChat && inputChat) {
-    btnSendChat.addEventListener('click', () => {
-      state.sendMessage(state.activeChatPlayerId, inputChat.value);
+      if (file && previewContainer && videoPreview) {
+        const objectUrl = URL.createObjectURL(file);
+        videoPreview.src = objectUrl;
+        previewContainer.style.display = 'block';
+      }
     });
   }
 
-  // SUPABASE AUTH FORMS
+  // REAL SUPABASE VIDEO UPLOAD FORM SUBMIT
+  const formUpload = document.getElementById('form-upload-clip');
+  if (formUpload) {
+    formUpload.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fileInputElem = document.getElementById('upload-file-input');
+      const titleElem = document.getElementById('upload-title');
+      const descElem = document.getElementById('upload-desc');
+
+      const file = fileInputElem.files[0];
+      const title = titleElem.value;
+      const description = descElem.value;
+
+      state.uploadGameplayClip({ file, title, description });
+    });
+  }
+
+  // SUPABASE AUTH SUBMITS
   const formSignIn = document.getElementById('form-supabase-signin');
   if (formSignIn) {
     formSignIn.addEventListener('submit', (e) => {
@@ -1799,57 +1687,6 @@ function attachEventListeners() {
       const ign = document.getElementById('auth-signup-ign').value;
       const uid = document.getElementById('auth-signup-uid').value;
       state.signUpWithSupabase({ email, password, ign, uid });
-    });
-  }
-
-  const formEsports = document.getElementById('form-esports-apply');
-  if (formEsports) {
-    formEsports.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const listing = state.selectedEsportsApplyModal;
-      if (!listing) return;
-      state.submitEsportsApplication({
-        teamName: listing.teamName,
-        tournament: listing.tournament,
-        role: document.getElementById('app-role').value,
-        uid: document.getElementById('app-uid').value,
-        kd: document.getElementById('app-kd').value,
-        contact: document.getElementById('app-contact').value
-      });
-    });
-  }
-
-  const formChallenge = document.getElementById('form-send-challenge');
-  if (formChallenge) {
-    formChallenge.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const oppSelect = document.getElementById('chal-opponent-select');
-      const opponentId = oppSelect ? oppSelect.value : (state.selectedChallengeModalPlayer?.id);
-      const opponent = state.players.find(p => p.id === opponentId) || state.selectedChallengeModalPlayer;
-      if (!opponent) return;
-
-      state.sendChallenge({
-        opponentId: opponent.id,
-        opponentIgn: opponent.ign,
-        opponentAvatar: opponent.avatar,
-        mode: document.getElementById('chal-mode').value,
-        map: document.getElementById('chal-map').value,
-        stake: document.getElementById('chal-stake').value,
-        scheduledTime: document.getElementById('chal-time').value
-      });
-    });
-  }
-
-  const formUpload = document.getElementById('form-upload-clip');
-  if (formUpload) {
-    formUpload.addEventListener('submit', (e) => {
-      e.preventDefault();
-      state.addClip({
-        title: document.getElementById('upload-title').value,
-        description: document.getElementById('upload-desc').value,
-        mediaType: "image",
-        mediaUrl: "assets/gameplay_thumb1.jpg"
-      });
     });
   }
 
@@ -2039,14 +1876,7 @@ function handleGlobalClick(e) {
   }
 
   const target = e.target.closest('[data-action]');
-  if (!target) {
-    if (e.target.id === 'close-player-modal') state.closePlayerModal();
-    if (e.target.id === 'close-challenge-modal') state.closeChallengeModal();
-    if (e.target.id === 'close-upload-modal') state.toggleUploadModal(false);
-    if (e.target.id === 'close-login-modal') state.toggleLoginModal(false);
-    if (e.target.id === 'close-esports-apply-modal') state.closeEsportsApplyModal();
-    return;
-  }
+  if (!target) return;
 
   const action = target.getAttribute('data-action');
   const id = target.getAttribute('data-id');
@@ -2071,17 +1901,6 @@ function handleGlobalClick(e) {
     const listing = state.esportsListings.find(x => x.id === id);
     if (listing) state.openEsportsApplyModal(listing);
   }
-  else if (action === 'challenge') {
-    state.closePlayerModal();
-    const p = state.players.find(x => x.id === id);
-    if (p) state.openChallengeModal(p);
-  }
-  else if (action === 'message') {
-    state.closePlayerModal();
-    state.setActiveChatPlayer(id);
-    state.setActiveTab('chat');
-  }
-  else if (action === 'select-chat') state.setActiveChatPlayer(target.getAttribute('data-player-id'));
 }
 
 state.subscribe(renderApp);
