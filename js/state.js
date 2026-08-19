@@ -12,6 +12,13 @@ class StateManager {
     this.selectedLoginModal = false;
     this.activeChatPlayerId = 'player_1';
 
+    // Filters
+    this.roleFilter = 'all';
+    this.stateFilter = 'all';
+    this.clipTagFilter = 'All Highlights';
+    this.newsCategoryFilter = 'All Articles';
+    this.challengeFilter = 'All';
+
     // Load or initialize localStorage
     this.currentUser = this.loadFromStorage('booyah_user', initialCurrentUser);
     this.players = this.loadFromStorage('booyah_players', initialPlayers);
@@ -59,6 +66,31 @@ class StateManager {
 
   setSearchQuery(query) {
     this.searchQuery = query;
+    this.notify();
+  }
+
+  setRoleFilter(role) {
+    this.roleFilter = role;
+    this.notify();
+  }
+
+  setStateFilter(stateName) {
+    this.stateFilter = stateName;
+    this.notify();
+  }
+
+  setClipTagFilter(tag) {
+    this.clipTagFilter = tag;
+    this.notify();
+  }
+
+  setNewsCategoryFilter(category) {
+    this.newsCategoryFilter = category;
+    this.notify();
+  }
+
+  setChallengeFilter(filter) {
+    this.challengeFilter = filter;
     this.notify();
   }
 

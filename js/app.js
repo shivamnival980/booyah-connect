@@ -9,6 +9,8 @@ import { renderChat } from './components/chat.js';
 import { renderProfile } from './components/profile.js';
 import { renderModals } from './components/modals.js';
 
+let isGlobalClickAttached = false;
+
 function renderApp() {
   const appRoot = document.getElementById('app');
   if (!appRoot) return;
@@ -55,11 +57,17 @@ function renderApp() {
 function attachEventListeners() {
   // Navigation Tabs
   document.querySelectorAll('[data-tab]').forEach(elem => {
-    elem.addEventListener('click', (e) => {
+    elem.addEventListener('click', () => {
       const tab = elem.getAttribute('data-tab');
       state.setActiveTab(tab);
     });
   });
+
+  // Nav Brand Logo click
+  const navBrand = document.getElementById('nav-brand');
+  if (navBrand) {
+    navBrand.addEventListener('click', () => state.setActiveTab('feed'));
+  }
 
   // Global Search
   const searchInput = document.getElementById('global-search-input');
@@ -75,16 +83,57 @@ function attachEventListeners() {
     btnUpload.addEventListener('click', () => state.toggleUploadModal(true));
   }
 
+  // Create Challenge Trigger
+  const btnCreateChallenge = document.getElementById('btn-create-challenge');
+  if (btnCreateChallenge) {
+    btnCreateChallenge.addEventListener('click', () => {
+      if (state.players && state.players.length > 0) {
+        state.openChallengeModal(state.players[0]);
+      } else {
+        state.setActiveTab('connect');
+      }
+    });
+  }
+
   // Login Modal Trigger
   const btnLogin = document.getElementById('btn-login-modal');
   if (btnLogin) {
     btnLogin.addEventListener('click', () => state.toggleLoginModal(true));
   }
 
-  // Action delegation for click events
-  document.addEventListener('click', handleGlobalClick);
+  // Dropdown Filters
+  const roleFilterSelect = document.getElementById('role-filter');
+  if (roleFilterSelect) {
+    roleFilterSelect.addEventListener('change', (e) => {
+      state.setRoleFilter(e.target.value);
+    });
+  }
 
-  // User Login Form Submission
+  const stateFilterSelect = document.getElementById('state-filter');
+  if (stateFilterSelect) {
+    stateFilterSelect.addEventListener('change', (e) => {
+      state.setStateFilter(e.target.value);
+    });
+  }
+
+  // Rating Range Sliders Live Updates
+  ['aim', 'teamwork', 'iq', 'sportsmanship'].forEach(metric => {
+    const slider = document.getElementById(`rate-${metric}`);
+    const labelVal = document.getElementById(`val-${metric}`);
+    if (slider && labelVal) {
+      slider.addEventListener('input', (e) => {
+        labelVal.textContent = parseFloat(e.target.value).toFixed(1);
+      });
+    }
+  });
+
+  // Global click delegator (attach only once)
+  if (!isGlobalClickAttached) {
+    document.addEventListener('click', handleGlobalClick);
+    isGlobalClickAttached = true;
+  }
+
+  // Form Submissions
   const formLogin = document.getElementById('form-user-login');
   if (formLogin) {
     formLogin.addEventListener('submit', (e) => {
@@ -98,7 +147,6 @@ function attachEventListeners() {
     });
   }
 
-  // Challenge Form Submission
   const formChallenge = document.getElementById('form-send-challenge');
   if (formChallenge) {
     formChallenge.addEventListener('submit', (e) => {
@@ -123,7 +171,6 @@ function attachEventListeners() {
     });
   }
 
-  // Rating Form Submission
   const formRating = document.getElementById('form-submit-rating');
   if (formRating) {
     formRating.addEventListener('submit', (e) => {
@@ -141,7 +188,6 @@ function attachEventListeners() {
     });
   }
 
-  // Upload Clip Form Submission
   const formUpload = document.getElementById('form-upload-clip');
   if (formUpload) {
     formUpload.addEventListener('submit', (e) => {
@@ -176,7 +222,6 @@ function attachEventListeners() {
     });
   }
 
-  // Send Chat Message button
   const btnSendChat = document.getElementById('btn-send-chat');
   const chatInput = document.getElementById('chat-input-field');
   if (btnSendChat && chatInput) {
@@ -191,7 +236,6 @@ function attachEventListeners() {
     });
   }
 
-  // Clip Comment submission
   document.querySelectorAll('.send-comment-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const clipId = btn.getAttribute('data-clip-id');
@@ -204,8 +248,25 @@ function attachEventListeners() {
 }
 
 function handleGlobalClick(e) {
+  // Modal background overlay click to close
+  if (e.target.classList.contains('modal-overlay')) {
+    if (e.target.id === 'modal-player') state.closePlayerModal();
+    if (e.target.id === 'modal-challenge') state.closeChallengeModal();
+    if (e.target.id === 'modal-rating') state.closeRatingModal();
+    if (e.target.id === 'modal-upload') state.toggleUploadModal(false);
+    if (e.target.id === 'modal-login') state.toggleLoginModal(false);
+    return;
+  }
+
   const target = e.target.closest('[data-action]');
-  if (!target) return;
+  if (!target) {
+    if (e.target.id === 'close-player-modal') state.closePlayerModal();
+    if (e.target.id === 'close-challenge-modal' || e.target.id === 'cancel-challenge-modal') state.closeChallengeModal();
+    if (e.target.id === 'close-rating-modal' || e.target.id === 'cancel-rating-modal') state.closeRatingModal();
+    if (e.target.id === 'close-upload-modal' || e.target.id === 'cancel-upload-modal') state.toggleUploadModal(false);
+    if (e.target.id === 'close-login-modal' || e.target.id === 'cancel-login-modal') state.toggleLoginModal(false);
+    return;
+  }
 
   const action = target.getAttribute('data-action');
   const id = target.getAttribute('data-id');
@@ -217,6 +278,15 @@ function handleGlobalClick(e) {
     if (section) {
       section.classList.toggle('open');
     }
+  } else if (action === 'filter-clip-tag') {
+    const tag = target.getAttribute('data-tag');
+    state.setClipTagFilter(tag);
+  } else if (action === 'filter-challenge') {
+    const filter = target.getAttribute('data-filter');
+    state.setChallengeFilter(filter);
+  } else if (action === 'filter-news') {
+    const cat = target.getAttribute('data-category');
+    state.setNewsCategoryFilter(cat);
   } else if (action === 'toggle-connect') {
     state.toggleConnection(id);
   } else if (action === 'view-profile') {
@@ -253,7 +323,7 @@ function handleGlobalClick(e) {
     state.setActiveChatPlayer(playerId);
   }
 
-  // Close modals
+  // Close modal buttons
   if (e.target.id === 'close-player-modal') state.closePlayerModal();
   if (e.target.id === 'close-challenge-modal' || e.target.id === 'cancel-challenge-modal') state.closeChallengeModal();
   if (e.target.id === 'close-rating-modal' || e.target.id === 'cancel-rating-modal') state.closeRatingModal();

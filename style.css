@@ -171,149 +171,112 @@ body {
 }
 
 .navbar-container {
-  max-width: 1350px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 12px 24px;
+  padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 10px;
+  width: 100%;
 }
 
 .navbar-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   cursor: pointer;
-}
-
-.logo-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary-fire) 0%, var(--amber-gold) 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #FFF;
-  box-shadow: 0 0 15px rgba(255, 85, 0, 0.4);
+  flex-shrink: 0;
 }
 
 .brand-title {
   font-family: var(--font-heading);
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   line-height: 1;
 }
 
-.brand-highlight {
-  color: var(--primary-fire);
-}
-
-.brand-subtitle {
-  display: block;
-  font-size: 0.65rem;
-  color: var(--amber-gold);
-  letter-spacing: 2px;
-  font-weight: 700;
-}
-
 .navbar-search {
-  flex: 1;
-  max-width: 320px;
   position: relative;
   display: flex;
   align-items: center;
-}
-
-.navbar-search svg {
-  position: absolute;
-  left: 14px;
-  color: var(--text-muted);
+  gap: 4px;
+  width: 220px;
+  max-width: 240px;
+  flex-shrink: 0;
 }
 
 .navbar-search input {
   width: 100%;
-  padding: 10px 14px 10px 42px;
+  padding: 6px 10px;
   background: var(--dark-surface);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
   color: var(--text-main);
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  transition: all 0.2s;
+  font-size: 0.8rem;
 }
 
-.navbar-search input:focus {
-  outline: none;
-  border-color: var(--primary-fire);
-  box-shadow: 0 0 10px rgba(255, 85, 0, 0.3);
+.navbar-search .btn {
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
 }
 
 .navbar-tabs {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  flex-shrink: 1;
 }
 
 .nav-tab {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: 10px 16px;
+  padding: 8px 10px;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  position: relative;
+  gap: 6px;
+  white-space: nowrap;
   transition: all 0.2s;
 }
 
-.nav-tab:hover {
-  color: var(--text-main);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.nav-tab.active {
-  color: var(--primary-fire);
-  background: rgba(255, 85, 0, 0.12);
-  border-bottom: 2px solid var(--primary-fire);
-}
-
-.nav-badge {
-  background: var(--fire-red);
-  color: #FFF;
-  font-size: 0.7rem;
-  padding: 2px 6px;
-  border-radius: var(--radius-full);
-  font-weight: 700;
+.navbar-user-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .coin-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: rgba(255, 183, 0, 0.12);
   border: 1px solid rgba(255, 183, 0, 0.3);
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
   font-weight: 700;
+  font-size: 0.82rem;
   color: var(--amber-gold);
 }
 
 .nav-profile-btn {
   background: var(--dark-surface);
   border: 1px solid rgba(255, 85, 0, 0.3);
-  padding: 4px 12px 4px 4px;
+  padding: 3px 8px 3px 3px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   cursor: pointer;
 }
 
@@ -469,16 +432,28 @@ body {
 .clip-media-box {
   position: relative;
   width: 100%;
-  height: 220px;
+  min-height: 240px;
+  max-height: 480px;
   background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  cursor: pointer;
+}
+
+.clip-media-video {
+  width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+  background: #000;
+  outline: none;
 }
 
 .clip-media-img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-height: 480px;
+  object-fit: contain;
+  background: #000;
   transition: transform 0.4s;
 }
 
@@ -838,9 +813,19 @@ body {
 }
 
 .player-card-actions {
-  display: flex;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.player-card-actions .btn {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.82rem;
   justify-content: center;
+  border-radius: var(--radius-md);
 }
 
 /* CHALLENGES 1V1 ROOMS */
@@ -1395,6 +1380,217 @@ body {
   color: var(--text-muted);
   font-size: 1.8rem;
   cursor: pointer;
+}
+
+/* GAME ARENA FULLSCREEN OVERLAY & HUD STYLING */
+.game-arena-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(5, 7, 10, 0.96);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.game-arena-card {
+  background: var(--bg-card);
+  border: 2px solid var(--primary-fire);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 780px;
+  box-shadow: 0 0 50px rgba(255, 85, 0, 0.3);
+  overflow: hidden;
+  position: relative;
+}
+
+.game-arena-header {
+  background: linear-gradient(135deg, rgba(255, 85, 0, 0.25) 0%, rgba(18, 22, 29, 0.95) 100%);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.game-arena-body {
+  padding: 24px;
+  position: relative;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* AWM SCOPE CROSSHAIR & TARGETS */
+.awm-scope-canvas {
+  width: 100%;
+  height: 340px;
+  background: radial-gradient(circle, #0b1a0e 0%, #000000 100%);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  border: 3px solid rgba(0, 230, 118, 0.4);
+  box-shadow: inset 0 0 30px rgba(0, 230, 118, 0.2);
+  cursor: crosshair;
+}
+
+.awm-scope-reticle {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reticle-circle {
+  width: 220px;
+  height: 220px;
+  border: 2px dashed rgba(0, 230, 118, 0.6);
+  border-radius: 50%;
+  position: relative;
+}
+
+.reticle-cross-h {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(0, 230, 118, 0.8);
+}
+
+.reticle-cross-v {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(0, 230, 118, 0.8);
+}
+
+.scope-target-enemy {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--fire-red) 0%, #700000 100%);
+  border: 3px solid var(--amber-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 0 20px var(--fire-red);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.scope-target-enemy:active {
+  transform: scale(0.85);
+}
+
+/* 360 GLOO RADAR ARENA */
+.radar-360-container {
+  width: 100%;
+  height: 340px;
+  background: radial-gradient(circle, #101c2c 0%, #05080c 100%);
+  border-radius: 16px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 183, 0, 0.3);
+}
+
+.radar-ring {
+  width: 240px;
+  height: 240px;
+  border: 2px solid rgba(255, 183, 0, 0.2);
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-center-player {
+  width: 60px;
+  height: 60px;
+  background: var(--primary-fire);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  box-shadow: 0 0 25px var(--primary-fire);
+  z-index: 5;
+}
+
+.radar-dir-btn {
+  position: absolute;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  background: var(--dark-surface);
+  color: var(--amber-gold);
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.radar-dir-btn.active-attack {
+  background: var(--fire-red);
+  color: #FFF;
+  border-color: #FFF;
+  animation: pulseAttack 0.4s infinite alternate;
+}
+
+@keyframes pulseAttack {
+  0% { transform: scale(1); box-shadow: 0 0 10px var(--fire-red); }
+  100% { transform: scale(1.15); box-shadow: 0 0 30px var(--fire-red); }
+}
+
+.radar-dir-north { top: -20px; }
+.radar-dir-south { bottom: -20px; }
+.radar-dir-west { left: -20px; }
+.radar-dir-east { right: -20px; }
+
+/* 15-SEGMENT LUCKY WHEEL */
+.wheel-15-wrapper {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.wheel-15-svg {
+  width: 100%;
+  height: 100%;
+  transition: transform 4s cubic-bezier(0.15, 0.9, 0.2, 1);
+  transform-origin: 50% 50%;
+}
+
+.wheel-pointer-top {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 24px solid var(--primary-fire);
+  z-index: 10;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.8));
 }
 
 .form-group {

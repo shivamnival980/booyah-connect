@@ -1,15 +1,26 @@
 import { state } from '../state.js';
 
 export function renderFeed() {
-  const { clips, searchQuery, currentUser } = state;
+  const { clips, searchQuery, clipTagFilter, currentUser } = state;
 
   const filteredClips = clips.filter(c => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return c.title.toLowerCase().includes(q) ||
-           c.authorIgn.toLowerCase().includes(q) ||
-           c.tags.some(t => t.toLowerCase().includes(q));
+    let matchesSearch = true;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      matchesSearch = c.title.toLowerCase().includes(q) ||
+                      c.authorIgn.toLowerCase().includes(q) ||
+                      c.tags.some(t => t.toLowerCase().includes(q));
+    }
+
+    let matchesTag = true;
+    if (clipTagFilter && clipTagFilter !== 'All Highlights') {
+      matchesTag = c.tags.some(t => t.toLowerCase().replace('-', '').includes(clipTagFilter.toLowerCase().replace('-', '').replace(' ', '')));
+    }
+
+    return matchesSearch && matchesTag;
   });
+
+  const availableTags = ['All Highlights', '1v4 Clutch', 'CS Ranked', 'AWM Sniping', 'Grandmaster'];
 
   return `
     <div class="feed-container">
@@ -36,11 +47,9 @@ export function renderFeed() {
       <div class="feed-header-bar">
         <h2>Latest Community Gameplay (${filteredClips.length})</h2>
         <div class="feed-tags-quick">
-          <span class="tag-pill active">All Highlights</span>
-          <span class="tag-pill">1v4 Clutch</span>
-          <span class="tag-pill">CS Ranked</span>
-          <span class="tag-pill">AWM Sniping</span>
-          <span class="tag-pill">Grandmaster</span>
+          ${availableTags.map(tag => `
+            <span class="tag-pill ${clipTagFilter === tag ? 'active' : ''}" data-action="filter-clip-tag" data-tag="${tag}">${tag}</span>
+          `).join('')}
         </div>
       </div>
 

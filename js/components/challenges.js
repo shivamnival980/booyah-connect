@@ -1,7 +1,16 @@
 import { state } from '../state.js';
 
-export function renderChallenges() {
-  const { challenges, currentUser } = state;
+  const { challenges, challengeFilter, currentUser } = state;
+
+  const filteredChallenges = challenges.filter(c => {
+    if (!challengeFilter || challengeFilter === 'All') return true;
+    if (challengeFilter === 'Pending') return c.status === 'Pending';
+    if (challengeFilter === 'Accepted') return c.status === 'Accepted';
+    if (challengeFilter === 'Completed') return c.status === 'Completed';
+    return true;
+  });
+
+  const filterTabs = ['All', 'Pending', 'Accepted', 'Completed'];
 
   return `
     <div class="challenges-container">
@@ -17,15 +26,21 @@ export function renderChallenges() {
 
       <!-- Challenge Tabs / Filter -->
       <div class="challenge-tabs">
-        <span class="chal-tab active">All Challenges (${challenges.length})</span>
-        <span class="chal-tab">Pending Acceptance</span>
-        <span class="chal-tab">Upcoming Matches</span>
-        <span class="chal-tab">Match Results</span>
+        ${filterTabs.map(tab => `
+          <span class="chal-tab ${challengeFilter === tab ? 'active' : ''}" data-action="filter-challenge" data-filter="${tab}">
+            ${tab === 'All' ? `All Challenges (${challenges.length})` : tab === 'Pending' ? 'Pending Acceptance' : tab === 'Accepted' ? 'Upcoming Matches' : 'Match Results'}
+          </span>
+        `).join('')}
       </div>
 
       <!-- List of Challenges -->
       <div class="challenges-list">
-        ${challenges.map(c => {
+        ${filteredChallenges.length === 0 ? `
+          <div class="empty-state">
+            <div class="empty-icon">⚔️</div>
+            <h3>No challenges in this status</h3>
+          </div>
+        ` : filteredChallenges.map(c => {
           const isChallenger = c.challengerId === currentUser.id;
           const opponentName = isChallenger ? c.opponentIgn : c.challengerIgn;
           const opponentAvatar = isChallenger ? c.opponentAvatar : c.challengerAvatar;
