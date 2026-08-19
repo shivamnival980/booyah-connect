@@ -1,0 +1,11 @@
+# Local Environment Files containing sensitive credentials
+env.js
+.env
+.env.local
+.env*.local
+
+# OS & IDE Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
