@@ -13,6 +13,14 @@ class StateManager {
     this.authModalTab = 'signin';
     this.activeChatPlayerId = 'player_1';
     this.isLoggedIn = false;
+    this.isUploading = false;
+    this.uploadStatusText = '';
+
+    // Feed Loading States
+    this.isClipsLoading = false;
+    this.clipsError = null;
+    this.hasFetchedRemoteClips = false;
+    this.postLimit = 20;
 
     this.roleFilter = 'all';
     this.stateFilter = 'all';
@@ -22,7 +30,7 @@ class StateManager {
 
     this.currentUser = initialCurrentUser;
     this.players = this.loadFromStorage('booyah_players', initialPlayers);
-    this.clips = this.loadFromStorage('booyah_clips', initialClips);
+    this.clips = initialClips;
     this.challenges = this.loadFromStorage('booyah_challenges', initialChallenges);
     this.news = this.loadFromStorage('booyah_news', initialNews);
     this.messages = this.loadFromStorage('booyah_messages', initialMessages);
@@ -47,6 +55,9 @@ class StateManager {
 
   initSupabaseAuth() {
     const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    
+    this.fetchFeedClipsFromSupabase();
+
     if (!client) return;
 
     client.auth.getSession().then(({ data: { session }, error }) => {
@@ -58,6 +69,7 @@ class StateManager {
     client.auth.onAuthStateChange((event, session) => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && session.user) {
         this.handleAuthUserSession(session.user);
+        this.fetchFeedClipsFromSupabase();
       } else if (event === 'SIGNED_OUT') {
         this.handleAuthUserSignOut();
       }
@@ -101,108 +113,58 @@ class StateManager {
     this.notify();
   }
 
-  async signUpWithSupabase({ email, password, ign, uid, userState, role }) {
+  async fetchFeedClipsFromSupabase() {
     const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
-    if (!client) {
-      alert("⚠️ Supabase Client Not Initialized.");
-      return;
-    }
+    if (!client) return;
 
-    if (!email || !email.includes('@')) {
-      alert("⚠️ Please enter a valid email address.");
-      return;
-    }
-    if (!password || password.length < 6) {
-      alert("⚠️ Password must be at least 6 characters long.");
-      return;
-    }
-    if (!ign || !uid) {
-      alert("⚠️ Please enter IGN and UID.");
-      return;
-    }
+    this.isClipsLoading = true;
+    this.clipsError = null;
+    this.notify();
 
     try {
-      const { data, error } = await client.auth.signUp({
-        email: email.trim(),
-        password: password,
-        options: {
-          data: {
-            ign: ign.trim(),
-            uid: uid.trim(),
-            state: userState ? userState.trim() : "Maharashtra",
-            role: role ? role.trim() : "Rusher"
-          }
-        }
-      });
+      const { data, error } = await client
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(this.postLimit);
 
       if (error) {
-        if (error.message.includes("already registered") || error.message.includes("User already exists")) {
-          alert("⚠️ An account with this email already exists. Please Sign In.");
-        } else {
-          alert("❌ Signup Error: " + error.message);
-        }
+        this.clipsError = error.message;
+        this.isClipsLoading = false;
+        this.notify();
         return;
       }
 
-      if (data.session) {
-        alert(`🎉 Account Created!\nWelcome, ${ign}!`);
-        this.handleAuthUserSession(data.user);
-        this.toggleLoginModal(false);
-      } else if (data.user) {
-        alert(`📧 Verification Email Sent!\nPlease check your inbox (${email}) to confirm your account.`);
-        this.toggleLoginModal(false);
-      }
-    } catch (err) {
-      alert("❌ Network Error connecting to Supabase.");
-    }
-  }
+      if (data && data.length > 0) {
+        const remoteClips = data.map(post => ({
+          id: post.id,
+          authorId: post.user_id,
+          authorIgn: post.user_ign || 'Pro Gamer',
+          authorAvatar: post.user_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${post.user_id}`,
+          authorRank: post.user_rank || 'Grandmaster',
+          title: post.title,
+          description: post.description,
+          mediaType: post.media_type || 'video',
+          mediaUrl: post.media_url,
+          tags: ["Gameplay", "Supabase", "FreeFire"],
+          likes: post.likes_count || 0,
+          isLiked: false,
+          views: post.views_count || 1,
+          createdAt: new Date(post.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
+          comments: []
+        }));
 
-  async signInWithSupabase(email, password) {
-    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
-    if (!client) {
-      alert("⚠️ Supabase Client Not Initialized.");
-      return;
-    }
-
-    if (!email || !password) {
-      alert("⚠️ Please enter Email and Password.");
-      return;
-    }
-
-    try {
-      const { data, error } = await client.auth.signInWithPassword({
-        email: email.trim(),
-        password: password
-      });
-
-      if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          alert("❌ Invalid Credentials: Incorrect email or password.");
-        } else if (error.message.includes("Email not confirmed")) {
-          alert("⚠️ Email not confirmed yet! Please check your email inbox to confirm.");
-        } else {
-          alert("❌ Sign In Error: " + error.message);
-        }
-        return;
+        this.clips = [...remoteClips, ...initialClips];
+        this.hasFetchedRemoteClips = true;
       }
 
-      if (data.session && data.user) {
-        alert(`🎉 Welcome back, ${data.user.user_metadata?.ign || 'Pro Gamer'}!`);
-        this.handleAuthUserSession(data.user);
-        this.toggleLoginModal(false);
-      }
-    } catch (err) {
-      alert("❌ Network Error during sign in.");
+      this.isClipsLoading = false;
+      this.notify();
+    } catch (e) {
+      this.clipsError = "Network error fetching posts";
+      this.isClipsLoading = false;
+      this.notify();
     }
-  }
-
-  async signOutFromSupabase() {
-    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
-    if (client) {
-      await client.auth.signOut();
-    }
-    this.handleAuthUserSignOut();
-    alert("👋 Logged out successfully!");
   }
 
   subscribe(listener) {
@@ -224,8 +186,6 @@ class StateManager {
 
   openPlayerModal(player) { this.selectedPlayerModal = player; this.notify(); }
   closePlayerModal() { this.selectedPlayerModal = null; this.notify(); }
-  openChallengeModal(player) { this.selectedChallengeModalPlayer = player; this.notify(); }
-  closeChallengeModal() { this.selectedChallengeModalPlayer = null; this.notify(); }
   toggleUploadModal(show) { this.selectedUploadModal = show; this.notify(); }
   toggleLoginModal(show, tab = 'signin') {
     this.selectedLoginModal = show;

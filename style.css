@@ -160,24 +160,27 @@ body {
   font-size: 0.85rem;
 }
 
-/* NAVBAR */
+/* NAVBAR (SINGLE-ROW CLEAN ESPORTS HEADER) */
 .navbar {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(9, 11, 14, 0.88);
+  background: rgba(9, 11, 14, 0.95);
   backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 85, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 85, 0, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  height: 64px;
 }
 
 .navbar-container {
-  max-width: 1400px;
+  max-width: 1650px;
+  height: 100%;
   margin: 0 auto;
-  padding: 10px 16px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 }
 
@@ -189,22 +192,93 @@ body {
   flex-shrink: 0;
 }
 
+.logo-icon {
+  font-size: 1.4rem;
+}
+
 .brand-title {
   font-family: var(--font-heading);
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 800;
   letter-spacing: 0.5px;
   line-height: 1;
 }
 
-.navbar-search {
-  position: relative;
+.brand-highlight {
+  color: var(--primary-fire);
+}
+
+.navbar-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 950px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.navbar-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
-  width: 220px;
-  max-width: 240px;
+  white-space: nowrap;
+  transition: all 0.2s;
   flex-shrink: 0;
+}
+
+.nav-tab:hover {
+  color: #FFF;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-tab.active {
+  color: var(--primary-fire);
+  background: rgba(255, 85, 0, 0.14);
+  border: 1px solid rgba(255, 85, 0, 0.35);
+}
+
+.nav-badge {
+  background: var(--fire-red);
+  color: #FFF;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  font-weight: 800;
+}
+
+.navbar-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.navbar-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 140px;
+  transition: width 0.25s ease;
+  flex-shrink: 0;
+}
+
+.navbar-search:focus-within {
+  width: 180px;
 }
 
 .navbar-search input {
@@ -223,28 +297,70 @@ body {
   border-radius: var(--radius-md);
 }
 
-.navbar-tabs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 1;
+.hamburger-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #FFF;
+  font-size: 1.2rem;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
-.nav-tab {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 0.82rem;
-  cursor: pointer;
+/* RESPONSIVE BREAKPOINTS FOR NAVBAR */
+@media (max-width: 1280px) {
+  .secondary-nav-link {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .navbar-search {
+    width: 100px;
+  }
+  .navbar-search:focus-within {
+    width: 140px;
+  }
+  .user-ign-mini {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-tabs {
+    display: none;
+  }
+  .hamburger-btn {
+    display: block;
+  }
+}
+
+.nav-tab:hover {
+  color: #FFF;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-tab.active {
+  color: var(--primary-fire);
+  background: rgba(255, 85, 0, 0.12);
+  border: 1px solid rgba(255, 85, 0, 0.3);
+}
+
+.nav-badge {
+  background: var(--fire-red);
+  color: #FFF;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  font-weight: 800;
+}
+
+.navbar-user-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  transition: all 0.2s;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .navbar-user-actions {
