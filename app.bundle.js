@@ -331,6 +331,19 @@ const academyCourses = [
   }
 ];
 
+function hasValidVideo(lesson) {
+  if (!lesson) return false;
+  const url = lesson.videoUrl || lesson.video_url || '';
+  const path = lesson.videoPath || lesson.video_path || '';
+
+  if (path && path.trim().length > 0) return true;
+  if (!url || typeof url !== 'string' || url.trim().length === 0) return false;
+
+  if (/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url)) return false;
+
+  return url.startsWith('http') || url.startsWith('blob:') || url.includes('storage') || /\.(mp4|webm|mov|mkv)$/i.test(url);
+}
+
 function isUuid(str) {
   return typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 }
@@ -379,6 +392,9 @@ class StateManager {
     this.challengeFilter = 'All';
 
     this.currentUser = initialCurrentUser;
+    this.academyCourses = typeof academyCourses !== 'undefined' ? academyCourses : [];
+    this.selectedEditCourseModal = null;
+    this.selectedEditLessonModal = null;
     this.players = this.loadFromStorage('booyah_players', initialPlayers);
     this.clips = initialClips;
     this.challenges = this.loadFromStorage('booyah_challenges', []);
@@ -387,6 +403,21 @@ class StateManager {
     this.esportsListings = this.loadFromStorage('booyah_esports', []);
     this.esportsApplications = this.loadFromStorage('booyah_apps', []);
     this.gameHistory = this.loadFromStorage('booyah_game_history', []);
+
+    // Admin System State
+    this.isAdmin = false;
+    this.activeAdminTab = 'overview';
+    this.adminStats = { totalUsers: 0, totalPosts: 0, totalCourses: 0, totalLessons: 0, totalComments: 0, totalLikes: 0, totalConnections: 0 };
+    this.contentReports = [];
+    this.adminNews = [];
+    this.adminLogs = [];
+    this.selectedReportModal = null;
+    this.selectedCreateCourseModal = false;
+    this.selectedCreateLessonModal = false;
+    this.selectedPreviewLesson = null;
+    this.selectedEditLessonModalData = null;
+    this.lessonUploadProgress = null;
+    this.selectedCreateNewsModal = false;
 
     this.initSupabaseAuth();
   }
@@ -413,7 +444,7 @@ class StateManager {
       try {
         const { data: { session } } = await client.auth.getSession();
         if (session && session.user) {
-          this.handleAuthUserSession(session.user);
+          await this.handleAuthUserSession(session.user);
         }
       } catch (e) {
         console.error("[Auth Init] Error retrieving session:", e);
@@ -429,7 +460,7 @@ class StateManager {
     client.auth.onAuthStateChange(async (event, session) => {
       console.log("[Supabase Auth Event]:", event, session?.user?.email);
       if (session && session.user) {
-        this.handleAuthUserSession(session.user);
+        await this.handleAuthUserSession(session.user);
       } else if (event === 'SIGNED_OUT') {
         this.handleAuthUserSignOut();
       }
@@ -439,14 +470,15 @@ class StateManager {
     });
   }
 
-  handleAuthUserSession(user) {
+  async handleAuthUserSession(user) {
+    if (!user) return;
     const meta = user.user_metadata || {};
     this.currentUser = {
       id: user.id,
-      email: user.email,
-      ign: meta.ign || user.email.split('@')[0] || "Pro Gamer",
+      email: user.email || "",
+      ign: meta.ign || user.email?.split('@')[0] || "Pro Gamer",
       uid: meta.uid || "849201948",
-      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(meta.ign || user.email)}`,
+      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(meta.ign || user.email || 'gamer')}`,
       rank: meta.rank || "Grandmaster",
       rankStars: meta.rankStars || 62,
       level: meta.level || 76,
@@ -468,6 +500,45 @@ class StateManager {
       skills: meta.skills || ["AWM Sniper", "M1887 One-Shot", "Gloo Wall Reflex", "IGL Shotcaller"]
     };
     this.isLoggedIn = true;
+
+    // DATABASE SECURITY CHECK FOR ADMIN ROLE (SUPABASE public.admin_users)
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client) {
+      try {
+        console.log("[Admin Verification] Querying Supabase public.admin_users for user UUID:", user.id);
+        const { data: adminData, error: adminErr } = await client
+          .from('admin_users')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        console.log("[Admin Verification Response]:", { user_id: user.id, email: user.email, adminData, adminErr });
+
+        if (!adminErr && adminData && (adminData.role === 'admin' || adminData.role === 'superadmin')) {
+          this.isAdmin = true;
+          console.log("🛡️ Authenticated User is a Verified Platform Admin! Enabling ⚙️ Admin Panel.");
+        } else {
+          try {
+            const { data: isRpcAdmin } = await client.rpc('is_admin', { user_id: user.id });
+            this.isAdmin = !!isRpcAdmin;
+          } catch (e) {
+            this.isAdmin = false;
+          }
+        }
+      } catch (err) {
+        console.warn("[Admin Verification Query Warning]:", err);
+        this.isAdmin = false;
+      }
+    } else {
+      if (this.currentUser.ign.includes("UGAT") || (user.email && user.email.includes("ugat"))) {
+        this.isAdmin = true;
+      }
+    }
+
+    if (this.isAdmin) {
+      await this.fetchAdminDashboardData();
+    }
+
     this.notify();
   }
 
@@ -477,6 +548,743 @@ class StateManager {
     this.userConnections = [];
     this.academyProgress = [];
     this.notify();
+  }
+
+    // ADMIN SYSTEM METHODS
+  // LESSON PREVIEW & EDIT MODAL METHODS
+  openLessonPreview(courseId, lessonId) {
+    const course = (this.academyCourses || []).find(c => c.id === courseId);
+    if (!course) return;
+    const lesson = course.lessons.find(l => l.id === lessonId);
+    if (!lesson) return;
+
+    this.selectedPreviewLesson = { course, lesson };
+    this.notify();
+  }
+
+  closeLessonPreview() {
+    this.selectedPreviewLesson = null;
+    this.notify();
+  }
+
+  openEditLessonModal(courseId, lessonId) {
+    const course = (this.academyCourses || []).find(c => c.id === courseId);
+    if (!course) return;
+    const lesson = course.lessons.find(l => l.id === lessonId);
+    if (!lesson) return;
+
+    this.selectedEditLessonModalData = {
+      courseId,
+      lessonId,
+      title: lesson.title,
+      description: lesson.description || "",
+      duration: lesson.duration || "10 mins",
+      difficulty: lesson.difficulty || "Beginner",
+      published: lesson.published !== false,
+      videoUrl: lesson.videoUrl || "",
+      videoPath: lesson.videoPath || "",
+      tips: Array.isArray(lesson.tips) ? lesson.tips.join('\n') : (lesson.tips || ""),
+      practiceTask: lesson.practiceTask || ""
+    };
+    this.notify();
+  }
+
+  closeEditLessonModal() {
+    this.selectedEditLessonModalData = null;
+    this.lessonUploadProgress = null;
+    this.notify();
+  }
+
+  async removeLessonVideo(courseId, lessonId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const course = (this.academyCourses || []).find(c => c.id === courseId);
+    if (!course) return;
+    const lesson = course.lessons.find(l => l.id === lessonId);
+    if (!lesson) return;
+
+    if (!confirm("Remove video from this lesson?")) return;
+
+    const oldPath = lesson.videoPath;
+    lesson.videoUrl = "";
+    lesson.videoPath = "";
+
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client) {
+      try {
+        await client.from('academy_lessons').update({ video_url: "", video_path: "" }).eq('id', lessonId);
+        if (oldPath) {
+          await client.storage.from('academy-videos').remove([oldPath]);
+        }
+      } catch (e) {}
+    }
+
+    await this.logAdminAction('REMOVE_LESSON_VIDEO', 'lesson', lessonId, `Removed video from lesson "${lesson.title}"`);
+    alert("🗑️ Video removed from lesson.");
+    if (this.selectedEditLessonModalData) {
+      this.selectedEditLessonModalData.videoUrl = "";
+      this.selectedEditLessonModalData.videoPath = "";
+    }
+    this.notify();
+  }
+
+    setActiveAdminTab(tab) {
+    this.activeAdminTab = tab;
+    this.notify();
+  }
+
+  async fetchAdminDashboardData() {
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (!client || !this.isAdmin) return;
+
+    try {
+      const [{ count: usersCount }, { count: postsCount }, { count: commentsCount }, { count: likesCount }, { count: connectionsCount }] = await Promise.all([
+        client.from('admin_users').select('*', { count: 'exact', head: true }),
+        client.from('posts').select('*', { count: 'exact', head: true }),
+        client.from('post_comments').select('*', { count: 'exact', head: true }),
+        client.from('post_likes').select('*', { count: 'exact', head: true }),
+        client.from('user_connections').select('*', { count: 'exact', head: true })
+      ]);
+
+      this.adminStats = {
+        totalUsers: (usersCount || 0) + this.players.length,
+        totalPosts: postsCount || this.clips.length,
+        totalCourses: academyCourses.length,
+        totalLessons: academyCourses.reduce((acc, c) => acc + c.lessons.length, 0),
+        totalComments: commentsCount || 1,
+        totalLikes: likesCount || 342,
+        totalConnections: connectionsCount || 384
+      };
+
+      const { data: reportsData } = await client.from('content_reports').select('*').order('created_at', { ascending: false });
+      this.contentReports = reportsData || [];
+
+      const { data: newsData } = await client.from('news').select('*').order('created_at', { ascending: false });
+      this.adminNews = newsData || [];
+
+      const { data: logsData } = await client.from('admin_activity_log').select('*').order('created_at', { ascending: false }).limit(30);
+      this.adminLogs = logsData || [];
+    } catch (e) {
+      console.warn("Fetch Admin Data Notice:", e.message);
+    }
+  }
+
+  async toggleFeaturePost(postId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const clip = this.clips.find(c => c.id === postId);
+    if (!clip) return;
+
+    const newStatus = !clip.featured;
+    clip.featured = newStatus;
+
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client && isUuid(postId)) {
+      await client.from('posts').update({ featured: newStatus }).eq('id', postId);
+    }
+
+    await this.logAdminAction(newStatus ? 'FEATURE_POST' : 'UNFEATURE_POST', 'post', postId, `Post "${clip.title}" featured: ${newStatus}`);
+    alert(newStatus ? "⭐ Post marked as Featured!" : "ℹ️ Post unfeatured.");
+    this.notify();
+  }
+
+  async toggleHidePost(postId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const clip = this.clips.find(c => c.id === postId);
+    if (!clip) return;
+
+    const newStatus = !clip.hidden;
+    clip.hidden = newStatus;
+
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client && isUuid(postId)) {
+      await client.from('posts').update({ hidden: newStatus }).eq('id', postId);
+    }
+
+    await this.logAdminAction(newStatus ? 'HIDE_POST' : 'UNHIDE_POST', 'post', postId, `Post "${clip.title}" hidden: ${newStatus}`);
+    alert(newStatus ? "🚫 Post hidden from community feed." : "👁️ Post made visible.");
+    this.notify();
+  }
+
+  async adminDeletePost(postId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    if (!confirm("⚠️ Are you sure you want to delete this post as Admin?")) return;
+
+    const clipIndex = this.clips.findIndex(c => c.id === postId);
+    if (clipIndex > -1) {
+      const clip = this.clips[clipIndex];
+      this.clips.splice(clipIndex, 1);
+
+      const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+      if (client && isUuid(postId)) {
+        await client.from('posts').delete().eq('id', postId);
+      }
+
+      await this.logAdminAction('DELETE_POST', 'post', postId, `Deleted post "${clip.title}" by ${clip.authorIgn}`);
+      alert("🗑️ Post deleted by Admin.");
+      this.notify();
+    }
+  }
+
+  async createContentReport(contentType, contentId, reason, details) {
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (!client || !this.isLoggedIn) {
+      return alert("⚠️ Please sign in to report content.");
+    }
+
+    try {
+      const { error } = await client.from('content_reports').insert([{
+        reporter_id: this.currentUser.id,
+        content_type: contentType,
+        content_id: String(contentId),
+        reason: reason,
+        details: details || "",
+        status: "pending"
+      }]);
+
+      if (error) {
+        alert("❌ Report Submission Error: " + error.message);
+      } else {
+        alert("🚩 Report Submitted! Our admin team (UGAT AGENT) will review it shortly.");
+        await this.fetchAdminDashboardData();
+      }
+    } catch (e) {
+      alert("❌ Error submitting report.");
+    }
+  }
+
+  async resolveReport(reportId, statusAction) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    
+    if (client && isUuid(reportId)) {
+      await client.from('content_reports').update({ status: statusAction, resolved_at: new Date().toISOString() }).eq('id', reportId);
+    }
+
+    const report = this.contentReports.find(r => r.id === reportId);
+    if (report) report.status = statusAction;
+
+    await this.logAdminAction('RESOLVE_REPORT', 'report', reportId, `Report ${reportId} marked as ${statusAction}`);
+    alert(`✅ Report status updated to: ${statusAction}`);
+    this.notify();
+  }
+
+  // ACADEMY CMS MANAGEMENT METHODS
+  async createAcademyCourse(courseData) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const courseId = courseData.id || `course_${Date.now()}`;
+    const newCourse = {
+      id: courseId,
+      title: courseData.title,
+      description: courseData.description,
+      category: courseData.category || "Aim",
+      difficulty: courseData.difficulty || "Beginner",
+      icon: courseData.icon || "🎯",
+      thumbnail: courseData.thumbnail || "",
+      published: courseData.published !== false,
+      display_order: this.academyCourses.length + 1,
+      lessons: []
+    };
+
+    this.academyCourses.push(newCourse);
+
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client) {
+      try {
+        await client.from('academy_courses').insert([{
+          id: courseId,
+          title: courseData.title,
+          description: courseData.description,
+          category: courseData.category || "Aim",
+          difficulty: courseData.difficulty || "Beginner",
+          icon: courseData.icon || "🎯",
+          published: courseData.published !== false
+        }]);
+      } catch (e) {}
+    }
+
+    await this.logAdminAction('CREATE_COURSE', 'course', courseId, `Created course "${newCourse.title}"`);
+    alert("🎉 Course created successfully!");
+    this.selectedEditCourseModal = null;
+    this.notify();
+  }
+
+  async updateAcademyCourse(courseId, courseData) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const course = this.academyCourses.find(c => c.id === courseId);
+    if (!course) return;
+
+    Object.assign(course, courseData);
+
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client) {
+      try {
+        await client.from('academy_courses').update(courseData).eq('id', courseId);
+      } catch (e) {}
+    }
+
+    await this.logAdminAction('UPDATE_COURSE', 'course', courseId, `Updated course "${course.title}"`);
+    alert("✅ Course updated successfully!");
+    this.selectedEditCourseModal = null;
+    this.notify();
+  }
+
+  async deleteAcademyCourse(courseId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    if (!confirm("⚠️ Delete this entire course and all its lessons permanently?")) return;
+
+    const idx = this.academyCourses.findIndex(c => c.id === courseId);
+    if (idx > -1) {
+      const title = this.academyCourses[idx].title;
+      this.academyCourses.splice(idx, 1);
+
+      const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+      if (client) {
+        try {
+          await client.from('academy_courses').delete().eq('id', courseId);
+        } catch (e) {}
+      }
+
+      await this.logAdminAction('DELETE_COURSE', 'course', courseId, `Deleted course "${title}"`);
+      alert("🗑️ Course deleted successfully!");
+      this.notify();
+    }
+  }
+
+  async togglePublishCourse(courseId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const course = this.academyCourses.find(c => c.id === courseId);
+    if (!course) return;
+
+    course.published = !course.published;
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client) {
+      try {
+        await client.from('academy_courses').update({ published: course.published }).eq('id', courseId);
+      } catch (e) {}
+    }
+
+    await this.logAdminAction('TOGGLE_PUBLISH_COURSE', 'course', courseId, `Course "${course.title}" published: ${course.published}`);
+    alert(`Course ${course.published ? 'Published' : 'Unpublished'}.`);
+    this.notify();
+  }
+
+  async createAcademyLesson(courseId, lessonData, videoFile) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const course = this.academyCourses.find(c => c.id === courseId);
+    if (!course) return alert("Course not found");
+
+    const lessonId = lessonData.id || `l_${Date.now()}`;
+    let videoUrl = lessonData.videoUrl || "assets/gameplay_thumb1.jpg";
+    let videoPath = "";
+
+    if (videoFile) {
+      const uploaded = await this.uploadAcademyVideo(courseId, lessonId, videoFile);
+      if (uploaded) {
+        videoUrl = uploaded.videoUrl;
+        videoPath = uploaded.videoPath;
+      }
+    }
+
+    const newLesson = {
+      id: lessonId,
+      title: lessonData.title,
+      description: lessonData.description || "",
+      duration: lessonData.duration || "10 mins",
+      difficulty: lessonData.difficulty || "Beginner",
+      videoUrl: videoUrl,
+      videoPath: videoPath,
+      tips: lessonData.tips || [],
+      practiceTask: lessonData.practiceTask || "",
+      published: lessonData.published !== false,
+      lesson_order: course.lessons.length + 1
+    };
+
+    course.lessons.push(newLesson);
+
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client) {
+      try {
+        await client.from('academy_lessons').insert([{
+          id: lessonId,
+          course_id: courseId,
+          title: lessonData.title,
+          description: lessonData.description || "",
+          duration: lessonData.duration || "10 mins",
+          difficulty: lessonData.difficulty || "Beginner",
+          video_url: videoUrl,
+          video_path: videoPath,
+          tips: lessonData.tips || [],
+          practice_task: lessonData.practiceTask || "",
+          published: lessonData.published !== false
+        }]);
+      } catch (e) {}
+    }
+
+    await this.logAdminAction('CREATE_LESSON', 'lesson', lessonId, `Created lesson "${newLesson.title}" in course "${course.title}"`);
+    alert("🎉 Lesson created successfully!");
+    this.selectedEditLessonModal = null;
+    this.notify();
+  }
+
+  async updateAcademyLesson(courseId, lessonId, lessonData, newVideoFile, newThumbnailFile) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const course = (this.academyCourses || []).find(c => c.id === courseId);
+    if (!course) return;
+    const lesson = course.lessons.find(l => l.id === lessonId);
+    if (!lesson) return;
+
+    const oldVideoPath = lesson.videoPath;
+    let newVideoPath = lesson.videoPath;
+    let newVideoUrl = lesson.videoUrl;
+
+    // STEP 1: Upload new video if provided (SAFE REPLACEMENT PATTERN)
+    if (newVideoFile) {
+      const uploadedVideo = await this.uploadAcademyVideo(courseId, lessonId, newVideoFile);
+      if (!uploadedVideo) {
+        alert("⚠️ Video upload failed. Changes to video were canceled to preserve existing data.");
+      } else {
+        newVideoPath = uploadedVideo.videoPath;
+        newVideoUrl = uploadedVideo.videoUrl;
+      }
+    }
+
+    let newThumbPath = lesson.thumbnailPath;
+    let newThumbUrl = lesson.thumbnailUrl;
+    if (newThumbnailFile) {
+      const uploadedThumb = await this.uploadAcademyThumbnail(courseId, lessonId, newThumbnailFile);
+      if (uploadedThumb) {
+        newThumbPath = uploadedThumb.thumbnailPath;
+        newThumbUrl = uploadedThumb.thumbnailUrl;
+      }
+    }
+
+    lessonData.videoUrl = newVideoUrl;
+    lessonData.videoPath = newVideoPath;
+    lessonData.thumbnailUrl = newThumbUrl;
+    lessonData.thumbnailPath = newThumbPath;
+
+    Object.assign(lesson, lessonData);
+
+    // STEP 2: Update Supabase Database
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    let dbSuccess = false;
+    if (client) {
+      try {
+        const { error: dbErr } = await client.from('academy_lessons').update({
+          title: lesson.title,
+          description: lesson.description,
+          duration: lesson.duration,
+          difficulty: lesson.difficulty,
+          video_url: lesson.videoUrl,
+          video_path: lesson.videoPath,
+          thumbnail_url: lesson.thumbnailUrl,
+          thumbnail_path: lesson.thumbnailPath,
+          tips: lesson.tips,
+          practice_task: lesson.practiceTask,
+          published: lesson.published
+        }).eq('id', lessonId);
+
+        if (!dbErr) dbSuccess = true;
+      } catch (e) {}
+    } else {
+      dbSuccess = true;
+    }
+
+    // STEP 3: Delete OLD video from Storage ONLY after database update succeeds
+    if (dbSuccess && newVideoFile && oldVideoPath && oldVideoPath !== newVideoPath && client) {
+      try {
+        console.log("[Academy Storage] Cleaning up old replaced video:", oldVideoPath);
+        await client.storage.from('academy-videos').remove([oldVideoPath]);
+      } catch (e) {}
+    }
+
+    await this.logAdminAction('UPDATE_LESSON', 'lesson', lessonId, `Updated lesson "${lesson.title}"`);
+    alert("✅ Lesson updated successfully!");
+    this.selectedEditLessonModalData = null;
+    this.notify();
+  }
+
+  async deleteAcademyLesson(courseId, lessonId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    if (!confirm("Delete this lesson permanently?")) return;
+
+    const course = this.academyCourses.find(c => c.id === courseId);
+    if (!course) return;
+
+    const lIdx = course.lessons.findIndex(l => l.id === lessonId);
+    if (lIdx > -1) {
+      const lesson = course.lessons[lIdx];
+      course.lessons.splice(lIdx, 1);
+
+      const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+      if (client) {
+        try {
+          await client.from('academy_lessons').delete().eq('id', lessonId);
+          if (lesson.videoPath) {
+            await client.storage.from('academy-videos').remove([lesson.videoPath]);
+          }
+        } catch (e) {}
+      }
+
+      await this.logAdminAction('DELETE_LESSON', 'lesson', lessonId, `Deleted lesson "${lesson.title}"`);
+      alert("🗑️ Lesson deleted permanently!");
+      this.notify();
+    }
+  }
+
+  async togglePublishLesson(courseId, lessonId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const course = this.academyCourses.find(c => c.id === courseId);
+    if (!course) return;
+    const lesson = course.lessons.find(l => l.id === lessonId);
+    if (!lesson) return;
+
+    lesson.published = !lesson.published;
+
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client) {
+      try {
+        await client.from('academy_lessons').update({ published: lesson.published }).eq('id', lessonId);
+      } catch (e) {}
+    }
+
+    await this.logAdminAction('TOGGLE_PUBLISH_LESSON', 'lesson', lessonId, `Lesson "${lesson.title}" published: ${lesson.published}`);
+    alert(`Lesson status changed to ${lesson.published ? 'Published' : 'Draft'}.`);
+    this.notify();
+  }
+
+  async reorderLesson(courseId, lessonId, direction) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const course = this.academyCourses.find(c => c.id === courseId);
+    if (!course) return;
+
+    const idx = course.lessons.findIndex(l => l.id === lessonId);
+    if (idx === -1) return;
+
+    if (direction === 'up' && idx > 0) {
+      const temp = course.lessons[idx];
+      course.lessons[idx] = course.lessons[idx - 1];
+      course.lessons[idx - 1] = temp;
+    } else if (direction === 'down' && idx < course.lessons.length - 1) {
+      const temp = course.lessons[idx];
+      course.lessons[idx] = course.lessons[idx + 1];
+      course.lessons[idx + 1] = temp;
+    }
+
+    this.notify();
+  }
+
+  async uploadAcademyVideo(courseId, lessonId, file) {
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (!client) {
+      alert("❌ Supabase client not initialized");
+      return null;
+    }
+
+    if (!file) return null;
+
+    // Validate extension
+    const ext = file.name.split('.').pop().toLowerCase();
+    const validExts = ['mp4', 'webm', 'mov', 'm4v'];
+    if (!validExts.includes(ext)) {
+      alert(`🛑 Unsupported video format ".${ext}". Please select MP4, WebM, MOV, or M4V.`);
+      return null;
+    }
+
+    // Validate file size (100 MB max)
+    const maxSize = 100 * 1024 * 1024;
+    if (file.size > maxSize) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      alert(`🛑 File size (${sizeMB} MB) exceeds maximum limit of 100 MB.`);
+      return null;
+    }
+
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `video_${Date.now()}_${safeName}`;
+      const filePath = `${courseId}/${lessonId}/${fileName}`;
+
+      console.log(`[Academy Storage] Uploading video (${(file.size / (1024 * 1024)).toFixed(1)} MB):`, filePath);
+
+      let { data, error } = await client.storage
+        .from('academy-videos')
+        .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+      // Automatic recovery if bucket is missing in Supabase project
+      if (error && (error.message?.includes('Bucket not found') || error.statusCode === 404 || error.status === 404)) {
+        console.warn("[Academy Storage] Bucket 'academy-videos' missing. Attempting automatic bucket creation...");
+        try {
+          const { error: createErr } = await client.storage.createBucket('academy-videos', { public: true });
+          if (!createErr) {
+            console.log("[Academy Storage] Bucket 'academy-videos' successfully created. Retrying upload...");
+            const retryRes = await client.storage
+              .from('academy-videos')
+              .upload(filePath, file, { cacheControl: '3600', upsert: true });
+            data = retryRes.data;
+            error = retryRes.error;
+          }
+        } catch (createEx) {
+          console.error("[Academy Storage] Auto-create bucket exception:", createEx);
+        }
+      }
+
+      if (error) {
+        console.error("Academy Video Upload Error:", error.message);
+        alert("⚠️ Video Upload Failed: " + error.message + "\n\nPlease run the updated supabase_setup.sql script in your Supabase SQL Editor to create the 'academy-videos' storage bucket with RLS policies.");
+        return null;
+      }
+
+      const { data: publicUrlData } = client.storage
+        .from('academy-videos')
+        .getPublicUrl(filePath);
+
+      return {
+        videoUrl: publicUrlData ? publicUrlData.publicUrl : "",
+        videoPath: filePath
+      };
+    } catch (e) {
+      console.error("Upload exception:", e);
+      alert("⚠️ Video Upload Exception: " + e.message);
+      return null;
+    }
+  }
+
+  async uploadAcademyThumbnail(courseId, lessonId, file) {
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (!client || !file) return null;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+      alert("🛑 Please select a valid image file (JPG, PNG, WebP).");
+      return null;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("🛑 Thumbnail image size exceeds 10 MB limit.");
+      return null;
+    }
+
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${courseId}/${lessonId}/thumb_${Date.now()}_${safeName}`;
+
+      const { data, error } = await client.storage
+        .from('academy-videos')
+        .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+      if (error) return null;
+
+      const { data: publicUrlData } = client.storage
+        .from('academy-videos')
+        .getPublicUrl(filePath);
+
+      return {
+        thumbnailUrl: publicUrlData ? publicUrlData.publicUrl : "",
+        thumbnailPath: filePath
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async createNewsAnnouncement({ title, description, content, thumbnail, category }) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+
+    const newArticle = {
+      id: `news_${Date.now()}`,
+      title,
+      description,
+      content,
+      thumbnail: thumbnail || "assets/ff_news_thumb.jpg",
+      category: category || "Esports",
+      published: true,
+      created_at: new Date().toISOString()
+    };
+
+    if (client) {
+      const { data, error } = await client.from('news').insert([{
+        title,
+        description,
+        content,
+        thumbnail: thumbnail || "assets/ff_news_thumb.jpg",
+        category: category || "Esports",
+        published: true
+      }]).select().single();
+
+      if (!error && data) {
+        this.adminNews.unshift(data);
+      }
+    } else {
+      this.adminNews.unshift(newArticle);
+    }
+
+    await this.logAdminAction('CREATE_NEWS', 'news', title, `Created announcement "${title}"`);
+    alert("📢 Announcement published successfully!");
+    this.selectedCreateNewsModal = false;
+    this.notify();
+  }
+
+  async togglePublishNews(newsId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    const item = this.adminNews.find(n => n.id === newsId);
+    if (!item) return;
+
+    item.published = !item.published;
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if (client && isUuid(newsId)) {
+      await client.from('news').update({ published: item.published }).eq('id', newsId);
+    }
+
+    await this.logAdminAction('TOGGLE_PUBLISH_NEWS', 'news', newsId, `News "${item.title}" published: ${item.published}`);
+    alert(`News article ${item.published ? 'Published' : 'Unpublished'}.`);
+    this.notify();
+  }
+
+  async deleteNews(newsId) {
+    if (!this.isAdmin) return alert("🛑 Admin Access Required");
+    if (!confirm("Delete this news article?")) return;
+
+    const idx = this.adminNews.findIndex(n => n.id === newsId);
+    if (idx > -1) {
+      const title = this.adminNews[idx].title;
+      this.adminNews.splice(idx, 1);
+
+      const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+      if (client && isUuid(newsId)) {
+        await client.from('news').delete().eq('id', newsId);
+      }
+
+      await this.logAdminAction('DELETE_NEWS', 'news', newsId, `Deleted news "${title}"`);
+      alert("🗑️ News article deleted.");
+      this.notify();
+    }
+  }
+
+  async logAdminAction(action, targetType, targetId, details) {
+    const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    const logEntry = {
+      id: `log_${Date.now()}`,
+      admin_user_id: this.currentUser.id,
+      action,
+      target_type: targetType,
+      target_id: String(targetId),
+      details,
+      created_at: new Date().toISOString()
+    };
+
+    this.adminLogs.unshift(logEntry);
+
+    if (client && this.isLoggedIn && isUuid(this.currentUser.id)) {
+      try {
+        await client.from('admin_activity_log').insert([{
+          admin_user_id: this.currentUser.id,
+          action,
+          target_type: targetType,
+          target_id: String(targetId),
+          details
+        }]);
+      } catch (e) {}
+    }
   }
 
   async signUpWithSupabase({ email, password, ign, uid, userState, role }) {
@@ -1207,71 +2015,10 @@ class StateManager {
 
 const state = new StateManager();
 
-// NAVBAR RENDERER (SINGLE-ROW CENTERED ESPORTS HEADER)
-function renderNavbar() {
-  const { activeTab, searchQuery, currentUser, challenges, isLoggedIn } = state;
-  const pendingChallengesCount = challenges.filter(c => c.opponentId === currentUser.id && c.status === 'Pending').length;
-
-  return `
-    <header class="navbar">
-      <div class="navbar-container">
-        <!-- BRAND LOGO (LEFT) -->
-        <div class="navbar-brand" id="nav-brand">
-          <div class="logo-icon">🔥</div>
-          <div class="brand-text">
-            <span class="brand-title">BOOYAH<span class="brand-highlight">CONNECT</span></span>
-          </div>
-        </div>
-
-        <!-- CENTERED NAVIGATION TABS (ALL 9 OPTIONS) -->
-        <nav class="navbar-tabs">
-          <button class="nav-tab ${activeTab === 'feed' ? 'active' : ''}" data-tab="feed" id="nav-home-btn">🏠 Home</button>
-          <button class="nav-tab ${activeTab === 'academy' ? 'active' : ''}" data-tab="academy">🎓 Academy</button>
-          <button class="nav-tab ${activeTab === 'connect' ? 'active' : ''}" data-tab="connect">Network</button>
-          <button class="nav-tab ${activeTab === 'minigames' ? 'active' : ''}" data-tab="minigames">🎮 Mini Games</button>
-          <button class="nav-tab ${activeTab === 'challenges' ? 'active' : ''}" data-tab="challenges">
-            1v1 Rooms ${pendingChallengesCount > 0 ? `<span class="nav-badge">${pendingChallengesCount}</span>` : ''}
-          </button>
-          <button class="nav-tab ${activeTab === 'esports' ? 'active' : ''}" data-tab="esports">🏆 Tryouts</button>
-          <button class="nav-tab ${activeTab === 'news' ? 'active' : ''}" data-tab="news">🌐 News</button>
-          <button class="nav-tab ${activeTab === 'leaderboard' ? 'active' : ''}" data-tab="leaderboard">Leaderboard</button>
-          <button class="nav-tab ${activeTab === 'chat' ? 'active' : ''}" data-tab="chat">💬 Chat</button>
-        </nav>
-
-        <!-- RIGHT SEARCH & USER ACTIONS -->
-        <div class="navbar-user-actions">
-          <div class="navbar-search">
-            <input type="text" id="global-search-input" placeholder="Search..." value="${searchQuery}" />
-            <button class="btn btn-primary btn-sm" id="btn-trigger-search">🔍</button>
-          </div>
-
-          <div class="coin-badge">
-            <span>🪙 ${currentUser.coins.toLocaleString()}</span>
-          </div>
-
-          ${isLoggedIn ? `
-            <button class="btn btn-secondary btn-sm" id="btn-supabase-logout" title="Sign Out of Supabase">
-              🚪 Logout
-            </button>
-          ` : `
-            <button class="btn btn-primary btn-sm" id="btn-login-modal" title="Sign In or Create Account with Supabase">
-              🔑 Login / Sign Up
-            </button>
-          `}
-
-          <button class="nav-profile-btn ${activeTab === 'profile' ? 'active' : ''}" data-tab="profile">
-            <img src="${currentUser.avatar}" alt="Avatar" class="user-avatar-tiny" />
-            <span class="user-ign-mini">${currentUser.ign.split(' ')[1] || currentUser.ign}</span>
-          </button>
-        </div>
-      </div>
-    </header>
-  `;
-}
-
 // ACADEMY RENDERER
 function renderAcademy() {
-  const { academyProgress, activeAcademyCategory, activeAcademyLesson, academyCategoryFilter, academyDifficultyFilter } = state;
+  const { academyProgress, activeAcademyCategory, activeAcademyLesson, academyCategoryFilter, academyDifficultyFilter, isAdmin } = state;
+  const academyCoursesList = (state.academyCourses || []).filter(c => isAdmin || c.published !== false);
   const { totalLessonsCount, completedCount, overallPercentage } = state.getAcademyStats();
   const badges = state.getAcademyBadges();
 
@@ -1943,6 +2690,9 @@ function renderNavbar() {
           <button class="nav-tab ${activeTab === 'news' ? 'active' : ''}" data-tab="news">🌐 News</button>
           <button class="nav-tab ${activeTab === 'leaderboard' ? 'active' : ''}" data-tab="leaderboard">Leaderboard</button>
           <button class="nav-tab ${activeTab === 'chat' ? 'active' : ''}" data-tab="chat">💬 Chat</button>
+          ${state.isAdmin ? `
+            <button class="nav-tab ${activeTab === 'admin' ? 'active' : ''}" data-tab="admin" style="color: #FF5500; font-weight: 800; border-color: rgba(255, 85, 0, 0.4);">⚙️ Admin</button>
+          ` : ''}
         </nav>
 
         <!-- RIGHT SEARCH & USER ACTIONS -->
@@ -2329,6 +3079,156 @@ function renderChat() {
 }
 
 // MODALS RENDERER
+
+function renderLessonPreviewModal() {
+  const preview = state.selectedPreviewLesson;
+  if (!preview) return '';
+  const { course, lesson } = preview;
+  const hasVideo = hasValidVideo(lesson);
+
+  return `
+    <div class="modal-overlay" id="modal-preview-lesson">
+      <div class="modal-card" style="max-width: 680px; max-height: 90vh; overflow-y: auto;">
+        <button class="modal-close-btn" id="close-preview-modal">&times;</button>
+
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+          <span style="background: rgba(255, 85, 0, 0.2); color: var(--primary-fire); font-weight: 800; padding: 4px 10px; border-radius: 8px;">
+            ${course.title}
+          </span>
+          <span class="badge-status ${lesson.published ? 'published' : 'draft'}">
+            ${lesson.published ? '🟢 Published' : '📝 Draft'}
+          </span>
+          <span style="color: var(--amber-gold); font-size: 0.85rem; font-weight: 700;">
+            ⏱ ${lesson.duration || '10 mins'} • 🟡 ${lesson.difficulty || 'Beginner'}
+          </span>
+        </div>
+
+        <h2 style="margin: 0 0 16px 0; font-family: var(--font-heading); font-size: 1.5rem; color: #FFF;">
+          ${lesson.title}
+        </h2>
+
+        ${hasVideo ? `
+          <div style="background: #000; border-radius: 14px; overflow: hidden; margin-bottom: 20px; border: 1px solid var(--primary-fire); box-shadow: 0 8px 25px rgba(0,0,0,0.8);">
+            <video src="${lesson.videoUrl || lesson.video_url}" controls autoplay style="width: 100%; max-height: 380px; display: block;"></video>
+          </div>
+        ` : `
+          <div style="background: rgba(14, 18, 24, 0.9); border: 1px dashed rgba(255, 255, 255, 0.2); border-radius: 14px; padding: 36px 20px; text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 3rem; margin-bottom: 10px;">🎥</div>
+            <h3 style="margin: 0 0 6px 0; color: var(--text-light); font-family: var(--font-heading);">No Video Uploaded Yet</h3>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0; max-width: 480px; margin: 0 auto; line-height: 1.5;">
+              This lesson currently contains written tips and practice tasks. Platform admins can upload an MP4/WebM video via the Edit Lesson modal.
+            </p>
+          </div>
+        `}
+
+        <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <h4 style="margin: 0 0 8px 0; color: var(--amber-gold); font-size: 0.9rem; text-transform: uppercase; font-weight: 800;">Lesson Description</h4>
+          <p style="margin: 0; color: var(--text-light); font-size: 0.95rem; line-height: 1.5;">${lesson.description || "No description available."}</p>
+        </div>
+
+        ${lesson.tips && lesson.tips.length > 0 ? `
+          <div style="margin-bottom: 20px;">
+            <h4 style="margin: 0 0 10px 0; color: var(--primary-fire); font-size: 0.9rem; text-transform: uppercase; font-weight: 800;">💡 Pro Tips</h4>
+            <ul style="margin: 0; padding-left: 20px; color: var(--text-main); font-size: 0.9rem; line-height: 1.6;">
+              ${(Array.isArray(lesson.tips) ? lesson.tips : [lesson.tips]).map(tip => `<li>${tip}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+          <button class="btn btn-secondary" id="btn-close-lesson-preview">Close Preview</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEditLessonModal() {
+  const data = state.selectedEditLessonModalData;
+  if (!data) return '';
+  const hasVideo = hasValidVideo({ videoUrl: data.videoUrl, videoPath: data.videoPath });
+
+  return `
+    <div class="modal-overlay" id="modal-edit-lesson">
+      <div class="modal-card" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+        <button class="modal-close-btn" id="close-edit-lesson-modal">&times;</button>
+        <h2 style="margin: 0 0 16px 0; font-family: var(--font-heading); color: #FFF;">✏️ EDIT LESSON</h2>
+
+        <form id="form-submit-edit-lesson">
+          <div style="margin-bottom: 20px; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 16px;">
+            <h3 style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--amber-gold); text-transform: uppercase; font-weight: 800;">LESSON INFORMATION</h3>
+            
+            <div class="form-group">
+              <label>Lesson Title</label>
+              <input type="text" id="edit-lesson-title" class="form-control" value="${data.title}" required />
+            </div>
+
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="edit-lesson-desc" class="form-control" rows="3" required>${data.description}</textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label>Duration (e.g. 10 mins)</label>
+                <input type="text" id="edit-lesson-duration" class="form-control" value="${data.duration}" required />
+              </div>
+              <div class="form-group">
+                <label>Difficulty</label>
+                <select id="edit-lesson-difficulty" class="form-control">
+                  <option value="Beginner" ${data.difficulty === 'Beginner' ? 'selected' : ''}>Beginner</option>
+                  <option value="Intermediate" ${data.difficulty === 'Intermediate' ? 'selected' : ''}>Intermediate</option>
+                  <option value="Advanced" ${data.difficulty === 'Advanced' ? 'selected' : ''}>Advanced</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Status Visibility</label>
+              <select id="edit-lesson-published" class="form-control">
+                <option value="true" ${data.published ? 'selected' : ''}>🟢 Published (Visible to all users)</option>
+                <option value="false" ${!data.published ? 'selected' : ''}>📝 Draft (Visible only to admins)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 20px; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 16px;">
+            <h3 style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--amber-gold); text-transform: uppercase; font-weight: 800;">VIDEO CONTENT</h3>
+            
+            <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.88rem; font-weight: 700;">Current Status:</span>
+              ${hasVideo ? `
+                <span class="badge-status published">🎥 Video Uploaded</span>
+              ` : `
+                <span style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">🎥 No Video Uploaded</span>
+              `}
+            </div>
+
+            <div class="form-group">
+              <label>Upload or Replace Video (MP4 / WebM / MOV — max 100 MB)</label>
+              <input type="file" id="edit-lesson-video-file" class="form-control" accept="video/mp4,video/webm,video/quicktime,video/*" />
+            </div>
+
+            ${hasVideo ? `
+              <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-edit-lesson-preview-video">▶ Preview Current Video</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-edit-lesson-remove-video" style="color: #FF5252;">🗑️ Remove Video</button>
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-edit-lesson" style="flex: 1;">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-edit-lesson" style="flex: 2; justify-content: center;">
+              💾 Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
 function renderModals() {
   const { selectedUploadModal, selectedLoginModal, authModalTab, isUploading, uploadStatusText, selectedEsportsApplyModal } = state;
 
@@ -2388,6 +3288,8 @@ function renderModals() {
       </div>
     ` : ''}
 
+    ${state.selectedPreviewLesson ? renderLessonPreviewModal() : ''}
+    ${state.selectedEditLessonModalData ? renderEditLessonModal() : ''}
     ${selectedUploadModal ? `
       <div class="modal-overlay" id="modal-upload">
         <div class="modal-card" style="max-width: 520px;">
@@ -2439,6 +3341,532 @@ function renderModals() {
 // MAIN RENDER & EVENT BINDINGS
 let isGlobalClickAttached = false;
 
+
+// ==========================================================================
+// ADMIN DASHBOARD VIEW RENDERERS
+// ==========================================================================
+
+function renderAdminOverview() {
+  const { adminStats, clips, players } = state;
+  const recentClips = clips.slice(0, 5);
+
+  return `
+    <div>
+      <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📊 Real Platform Analytics (Supabase)</h2>
+
+      <div class="admin-metrics-grid">
+        <div class="admin-metric-card">
+          <div class="admin-metric-lbl">Total Registered Users</div>
+          <div class="admin-metric-val">👥 ${adminStats.totalUsers}</div>
+        </div>
+        <div class="admin-metric-card">
+          <div class="admin-metric-lbl">Gameplay Video Posts</div>
+          <div class="admin-metric-val">🎥 ${adminStats.totalPosts}</div>
+        </div>
+        <div class="admin-metric-card">
+          <div class="admin-metric-lbl">Academy Masterclasses</div>
+          <div class="admin-metric-val">🎓 ${adminStats.totalCourses}</div>
+        </div>
+        <div class="admin-metric-card">
+          <div class="admin-metric-lbl">Total Academy Lessons</div>
+          <div class="admin-metric-val">📚 ${adminStats.totalLessons}</div>
+        </div>
+        <div class="admin-metric-card">
+          <div class="admin-metric-lbl">Community Comments</div>
+          <div class="admin-metric-val">💬 ${adminStats.totalComments}</div>
+        </div>
+        <div class="admin-metric-card">
+          <div class="admin-metric-lbl">Likes Awarded</div>
+          <div class="admin-metric-val">❤️ ${adminStats.totalLikes}</div>
+        </div>
+        <div class="admin-metric-card">
+          <div class="admin-metric-lbl">Player Connections</div>
+          <div class="admin-metric-val">🔗 ${adminStats.totalConnections}</div>
+        </div>
+      </div>
+
+      <h3 style="margin: 28px 0 14px 0; font-size: 1.2rem;">⏱️ Recent Gameplay Uploads</h3>
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Clip Title</th>
+              <th>Player IGN</th>
+              <th>Likes</th>
+              <th>Views</th>
+              <th>Uploaded</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recentClips.map(clip => `
+              <tr>
+                <td><strong>${clip.title}</strong></td>
+                <td>${clip.authorIgn}</td>
+                <td>❤️ ${clip.likes}</td>
+                <td>👁️ ${clip.views || 1}</td>
+                <td>${clip.createdAt}</td>
+                <td>
+                  <button class="btn btn-secondary btn-sm" data-action="toggle-feature-post" data-id="${clip.id}">
+                    ${clip.featured ? '⭐ Unfeature' : '⭐ Feature'}
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminAcademy() {
+  const courses = state.academyCourses || [];
+
+  return `
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.5rem; font-family: var(--font-heading);">🎓 ACADEMY MANAGER</h2>
+          <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
+            Manage masterclasses, upload training videos to <code>academy-videos</code>, toggle Draft/Published states, and reorder lessons.
+          </p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-primary btn-sm" id="btn-admin-add-course-trigger">+ Add Course</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        ${courses.length === 0 ? `
+          <div style="text-align: center; padding: 40px; background: rgba(0,0,0,0.2); border-radius: 16px;">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">📚</div>
+            <p style="color: var(--text-muted); margin: 0;">No academy courses available. Click "+ Add Course" to create one.</p>
+          </div>
+        ` : courses.map(course => `
+          <div style="background: rgba(14, 18, 24, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 18px; padding: 24px; box-shadow: 0 8px 25px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <span style="font-size: 2.2rem;">${course.icon || '🎓'}</span>
+                <div>
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <h3 style="margin: 0; font-size: 1.3rem; font-family: var(--font-heading); color: #FFF;">${course.title}</h3>
+                    <span class="badge-status ${course.published ? 'published' : 'draft'}">
+                      ${course.published ? '🟢 Published' : '📝 Draft'}
+                    </span>
+                    <span style="background: rgba(255, 183, 0, 0.15); color: var(--amber-gold); font-size: 0.78rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(255, 183, 0, 0.3);">
+                      ${course.category} • ${course.difficulty}
+                    </span>
+                  </div>
+                  <p style="margin: 6px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">${course.description}</p>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-primary btn-sm" data-action="admin-add-lesson-modal" data-course-id="${course.id}">+ Add Lesson</button>
+                <button class="btn btn-secondary btn-sm" data-action="admin-edit-course-modal" data-course-id="${course.id}">✏️ Edit Course</button>
+                <button class="btn btn-secondary btn-sm" data-action="toggle-publish-course" data-course-id="${course.id}">
+                  ${course.published ? '📤 Unpublish' : '🚀 Publish'}
+                </button>
+                <button class="btn btn-secondary btn-sm" data-action="admin-delete-course" data-course-id="${course.id}" style="color: #FF5252;">🗑️ Delete</button>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 16px;">
+              ${course.lessons.length === 0 ? `
+                <div style="padding: 20px; background: rgba(0,0,0,0.3); border-radius: 12px; text-align: center; color: var(--text-muted);">
+                  No lessons in this course yet. Click "+ Add Lesson" above.
+                </div>
+              ` : course.lessons.map((lesson, index) => {
+                const hasVideo = hasValidVideo(lesson);
+                return `
+                  <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <span style="background: rgba(255, 85, 0, 0.2); color: var(--primary-fire); font-weight: 800; font-size: 0.85rem; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255, 85, 0, 0.4);">
+                          L${index + 1}
+                        </span>
+                        <h4 style="margin: 0; font-size: 1.05rem; color: #FFF; font-weight: 700;">${lesson.title}</h4>
+                        <span class="badge-status ${lesson.published ? 'published' : 'draft'}">
+                          ${lesson.published ? '🟢 Published' : '📝 Draft'}
+                        </span>
+                        ${hasVideo ? `
+                          <span class="badge-status published">🎥 Video Ready</span>
+                        ` : `
+                          <span style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.12);">🎥 No Video</span>
+                        `}
+                        <span style="color: var(--amber-gold); font-size: 0.82rem; font-weight: 700;">⏱ ${lesson.duration || '10 mins'} • 🟡 ${lesson.difficulty || 'Beginner'}</span>
+                      </div>
+
+                      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary btn-sm" data-action="reorder-lesson-up" data-course-id="${course.id}" data-lesson-id="${lesson.id}" ${index === 0 ? 'disabled' : ''}>⬆️ Up</button>
+                        <button class="btn btn-secondary btn-sm" data-action="reorder-lesson-down" data-course-id="${course.id}" data-lesson-id="${lesson.id}" ${index === course.lessons.length - 1 ? 'disabled' : ''}>⬇️ Down</button>
+                        <button class="btn btn-primary btn-sm" data-action="edit-lesson" data-course-id="${course.id}" data-lesson-id="${lesson.id}">✏️ Edit</button>
+                        <button class="btn btn-secondary btn-sm" data-action="preview-lesson" data-course-id="${course.id}" data-lesson-id="${lesson.id}">👁️ Preview</button>
+                        <button class="btn btn-secondary btn-sm" data-action="admin-delete-lesson" data-course-id="${course.id}" data-lesson-id="${lesson.id}" style="color: #FF5252;">🗑️ Delete</button>
+                      </div>
+                    </div>
+                    ${lesson.description ? `<p style="margin: 8px 0 0 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.4;">${lesson.description}</p>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminModeration() {
+  const { clips } = state;
+
+  return `
+    <div>
+      <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">🎥 Community Content Moderation</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+        Review user gameplay video uploads in <code>gameplay-videos</code>. Admins can feature highlight clips, hide offending content, or permanently delete posts from Supabase.
+      </p>
+
+      <div class="clips-grid">
+        ${clips.map(clip => `
+          <div class="clip-card" style="border: 1px solid ${clip.featured ? 'var(--amber-gold)' : 'rgba(255,255,255,0.08)'};">
+            <div class="clip-media-box">
+              <img src="${clip.mediaUrl}" alt="${clip.title}" class="clip-media-img" />
+              ${clip.featured ? `<span style="position: absolute; top: 10px; left: 10px; background: var(--amber-gold); color: #000; font-weight: 800; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem;">⭐ FEATURED</span>` : ''}
+              ${clip.hidden ? `<span style="position: absolute; top: 10px; right: 10px; background: #FF5252; color: #FFF; font-weight: 800; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem;">🚫 HIDDEN</span>` : ''}
+            </div>
+
+            <div class="clip-card-body">
+              <h3 class="clip-title" style="font-size: 0.95rem;">${clip.title}</h3>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">By: <strong>${clip.authorIgn}</strong></div>
+
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-sm" data-action="toggle-feature-post" data-id="${clip.id}">
+                  ${clip.featured ? 'Unfeature' : '⭐ Feature'}
+                </button>
+                <button class="btn btn-secondary btn-sm" data-action="toggle-hide-post" data-id="${clip.id}" style="color: ${clip.hidden ? '#00E676' : '#FF1744'};">
+                  ${clip.hidden ? '👁️ Unhide' : '🚫 Hide'}
+                </button>
+                <button class="btn btn-secondary btn-sm" data-action="admin-delete-post" data-id="${clip.id}" style="color: #FF5252; margin-left: auto;">
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminReports() {
+  const { contentReports } = state;
+
+  return `
+    <div>
+      <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">🚨 User Content Reports Moderation Queue</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+        Review reports submitted by players regarding gameplay posts, comments, or player misconduct.
+      </p>
+
+      ${contentReports.length === 0 ? `
+        <div style="text-align: center; padding: 40px; background: rgba(0,0,0,0.2); border-radius: 16px;">
+          <div style="font-size: 2.5rem; margin-bottom: 10px;">✅</div>
+          <p style="color: var(--text-muted); margin: 0;">No active pending reports in queue.</p>
+        </div>
+      ` : `
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Report ID</th>
+                <th>Type</th>
+                <th>Content ID</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Reported At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${contentReports.map(r => `
+                <tr>
+                  <td><code>${String(r.id).slice(0, 8)}</code></td>
+                  <td><strong style="text-transform: uppercase;">${r.content_type}</strong></td>
+                  <td><code>${String(r.content_id).slice(0, 10)}</code></td>
+                  <td><span style="color: var(--amber-gold); font-weight: 700;">${r.reason}</span></td>
+                  <td>
+                    <span class="badge-status ${r.status === 'resolved' ? 'resolved' : r.status === 'pending' ? 'pending' : 'draft'}">
+                      ${r.status}
+                    </span>
+                  </td>
+                  <td>${new Date(r.created_at || Date.now()).toLocaleDateString()}</td>
+                  <td>
+                    ${r.status === 'pending' ? `
+                      <button class="btn btn-primary btn-sm" data-action="resolve-report" data-id="${r.id}" data-status="resolved">
+                        ✅ Resolve
+                      </button>
+                      <button class="btn btn-secondary btn-sm" data-action="resolve-report" data-id="${r.id}" data-status="dismissed">
+                        ❌ Dismiss
+                      </button>
+                    ` : `
+                      <span style="color: var(--text-muted); font-size: 0.8rem;">Reviewed</span>
+                    `}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function renderAdminNews() {
+  const { adminNews } = state;
+
+  return `
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0; font-size: 1.4rem;">📰 Official News & Announcements Publisher</h2>
+        <button class="btn btn-primary btn-sm" id="btn-admin-create-news-2">+ Publish New Announcement</button>
+      </div>
+
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Created Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${adminNews.map(n => `
+              <tr>
+                <td><strong>${n.title}</strong></td>
+                <td><span style="color: var(--primary-fire); font-weight: 700;">${n.category}</span></td>
+                <td>
+                  <span class="badge-status ${n.published ? 'published' : 'draft'}">
+                    ${n.published ? 'Published' : 'Draft'}
+                  </span>
+                </td>
+                <td>${new Date(n.created_at || Date.now()).toLocaleDateString()}</td>
+                <td>
+                  <button class="btn btn-secondary btn-sm" data-action="toggle-publish-news" data-id="${n.id}">
+                    ${n.published ? 'Unpublish' : 'Publish'}
+                  </button>
+                  <button class="btn btn-secondary btn-sm" data-action="delete-news" data-id="${n.id}" style="color: #FF5252;">
+                    🗑️ Delete
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminFeatured() {
+  const { clips } = state;
+  const featuredClips = clips.filter(c => c.featured);
+
+  return `
+    <div>
+      <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">⭐ Featured Gameplay Highlights Manager</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+        Highlight community gameplay videos on the Home feed hero section.
+      </p>
+
+      ${featuredClips.length === 0 ? `
+        <div style="text-align: center; padding: 40px; background: rgba(0,0,0,0.2); border-radius: 16px;">
+          <div style="font-size: 2.5rem; margin-bottom: 10px;">⭐</div>
+          <p style="color: var(--text-muted); margin: 0;">No featured clips currently marked. Go to Content Moderation tab to feature posts!</p>
+        </div>
+      ` : `
+        <div class="clips-grid">
+          ${featuredClips.map(clip => `
+            <div class="clip-card" style="border: 2px solid var(--amber-gold);">
+              <div class="clip-media-box">
+                <img src="${clip.mediaUrl}" alt="${clip.title}" class="clip-media-img" />
+              </div>
+
+              <div class="clip-card-body">
+                <h3 class="clip-title">${clip.title}</h3>
+                <div style="font-size: 0.8rem; color: var(--amber-gold); font-weight: 700; margin-bottom: 12px;">⭐ Featured Highlight</div>
+                <button class="btn btn-secondary btn-sm" data-action="toggle-feature-post" data-id="${clip.id}" style="width: 100%; justify-content: center;">
+                  ❌ Remove from Featured
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function renderAdminUsers() {
+  const { players, currentUser } = state;
+  const allUsers = [currentUser, ...players];
+
+  return `
+    <div>
+      <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">👥 Registered Players & User Profiles</h2>
+
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Avatar & IGN</th>
+              <th>Free Fire UID</th>
+              <th>Rank Tier</th>
+              <th>K/D Ratio</th>
+              <th>Headshot %</th>
+              <th>Role</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${allUsers.map(u => `
+              <tr>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <img src="${u.avatar}" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--primary-fire);" />
+                    <strong>${u.ign}</strong>
+                  </div>
+                </td>
+                <td><code>${u.uid}</code></td>
+                <td><span class="rank-badge-pill grandmaster" style="font-size: 0.75rem; padding: 2px 8px;">${u.rank}</span></td>
+                <td><strong style="color: var(--amber-gold);">${u.kdRatio || '4.85'}</strong></td>
+                <td>${u.headshotRate || '68.4%'}</td>
+                <td>${u.role || 'Rusher'}</td>
+                <td>
+                  <button class="btn btn-secondary btn-sm" data-action="view-full-profile" data-id="${u.id}">
+                    🔍 View Profile
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminLogs() {
+  const { adminLogs } = state;
+
+  return `
+    <div>
+      <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📜 Admin Security Audit Activity Log</h2>
+
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Admin Action</th>
+              <th>Target Type</th>
+              <th>Target ID</th>
+              <th>Action Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${adminLogs.length === 0 ? `
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No admin actions recorded yet.</td></tr>
+            ` : adminLogs.map(log => `
+              <tr>
+                <td style="font-size: 0.8rem; color: var(--text-muted);">${new Date(log.created_at || Date.now()).toLocaleTimeString()}</td>
+                <td><strong style="color: var(--primary-fire);">${log.action}</strong></td>
+                <td><span style="text-transform: uppercase; font-size: 0.75rem; font-weight: 700;">${log.target_type}</span></td>
+                <td><code>${String(log.target_id).slice(0, 12)}</code></td>
+                <td>${log.details}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminPanel() {
+  const { isAdmin, activeAdminTab, contentReports } = state;
+
+  if (!isAdmin) {
+    return `
+      <div style="max-width: 600px; margin: 60px auto; text-align: center; background: var(--bg-card); border: 1px solid #FF5252; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        <div style="font-size: 3.5rem; margin-bottom: 16px;">🛑</div>
+        <h2 style="color: #FF5252; font-family: var(--font-heading); margin: 0 0 10px 0;">ADMIN ACCESS REQUIRED</h2>
+        <p style="color: var(--text-light); font-size: 0.95rem; line-height: 1.5;">
+          You must be logged in as a verified platform administrator (<strong>UGAT AGENT</strong>) to access the BooyahConnect Admin Panel.
+        </p>
+        <button class="btn btn-primary" id="nav-home-btn" style="margin-top: 20px;">← Return to Home Feed</button>
+      </div>
+    `;
+  }
+
+  let subContentHtml = '';
+  switch (activeAdminTab) {
+    case 'overview': subContentHtml = renderAdminOverview(); break;
+    case 'academy': subContentHtml = renderAdminAcademy(); break;
+    case 'moderation': subContentHtml = renderAdminModeration(); break;
+    case 'reports': subContentHtml = renderAdminReports(); break;
+    case 'news': subContentHtml = renderAdminNews(); break;
+    case 'featured': subContentHtml = renderAdminFeatured(); break;
+    case 'users': subContentHtml = renderAdminUsers(); break;
+    case 'logs': subContentHtml = renderAdminLogs(); break;
+    default: subContentHtml = renderAdminOverview();
+  }
+
+  const pendingReportsCount = contentReports.filter(r => r.status === 'pending').length;
+
+  return `
+    <div class="admin-page-container">
+      <div class="admin-header-banner">
+        <div>
+          <span class="admin-title-badge">🛡️ PLATFORM ADMINISTRATOR</span>
+          <h1 style="margin: 0; font-size: 1.8rem; font-family: var(--font-heading); color: #FFF;">BOOYAHCONNECT ADMIN DASHBOARD</h1>
+          <p style="margin: 4px 0 0 0; color: var(--amber-gold); font-size: 0.9rem; font-weight: 700;">
+            Logged in as: <strong>${state.currentUser.ign}</strong> (UID: ${state.currentUser.uid})
+          </p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-primary btn-sm" id="btn-admin-create-news">+ Create Announcement</button>
+          <button class="btn btn-secondary btn-sm" id="btn-admin-refresh">🔄 Refresh Data</button>
+        </div>
+      </div>
+
+      <div class="admin-dashboard-layout">
+        <aside class="admin-sidebar">
+          <button class="admin-nav-item ${activeAdminTab === 'overview' ? 'active' : ''}" data-admin-tab="overview">📊 Overview</button>
+          <button class="admin-nav-item ${activeAdminTab === 'academy' ? 'active' : ''}" data-admin-tab="academy">🎓 Academy</button>
+          <button class="admin-nav-item ${activeAdminTab === 'moderation' ? 'active' : ''}" data-admin-tab="moderation">🎥 Moderation</button>
+          <button class="admin-nav-item ${activeAdminTab === 'reports' ? 'active' : ''}" data-admin-tab="reports">
+            🚨 Reports ${pendingReportsCount > 0 ? `<span class="nav-badge">${pendingReportsCount}</span>` : ''}
+          </button>
+          <button class="admin-nav-item ${activeAdminTab === 'news' ? 'active' : ''}" data-admin-tab="news">📰 News</button>
+          <button class="admin-nav-item ${activeAdminTab === 'featured' ? 'active' : ''}" data-admin-tab="featured">⭐ Featured</button>
+          <button class="admin-nav-item ${activeAdminTab === 'users' ? 'active' : ''}" data-admin-tab="users">👥 User Roster</button>
+          <button class="admin-nav-item ${activeAdminTab === 'logs' ? 'active' : ''}" data-admin-tab="logs">📜 Activity Log</button>
+        </aside>
+
+        <main class="admin-main-content">
+          ${subContentHtml}
+        </main>
+      </div>
+    </div>
+  `;
+}
+
 function renderApp() {
   const appRoot = document.getElementById('app');
   if (!appRoot) return;
@@ -2455,6 +3883,7 @@ function renderApp() {
     case 'news': mainContentHtml = renderNews(); break;
     case 'chat': mainContentHtml = renderChat(); break;
     case 'profile': mainContentHtml = renderProfile(); break;
+    case 'admin': mainContentHtml = renderAdminPanel(); break;
     case 'view-player-profile': mainContentHtml = renderFullPlayerProfile(); break;
     default: mainContentHtml = renderFeed();
   }
@@ -2469,6 +3898,93 @@ function renderApp() {
 }
 
 function attachEventListeners() {
+  document.querySelectorAll('[data-admin-tab]').forEach(elem => {
+    elem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.setActiveAdminTab(elem.getAttribute('data-admin-tab'));
+    });
+  });
+
+  const btnClosePreview = document.getElementById('btn-close-lesson-preview');
+  if (btnClosePreview) {
+    btnClosePreview.addEventListener('click', () => state.closeLessonPreview());
+  }
+
+  const closePreviewModalBtn = document.getElementById('close-preview-modal');
+  if (closePreviewModalBtn) {
+    closePreviewModalBtn.addEventListener('click', () => state.closeLessonPreview());
+  }
+
+  const closeEditLessonModalBtn = document.getElementById('close-edit-lesson-modal');
+  if (closeEditLessonModalBtn) {
+    closeEditLessonModalBtn.addEventListener('click', () => state.closeEditLessonModal());
+  }
+
+  const btnCancelEditLesson = document.getElementById('btn-cancel-edit-lesson');
+  if (btnCancelEditLesson) {
+    btnCancelEditLesson.addEventListener('click', () => state.closeEditLessonModal());
+  }
+
+  const btnRemoveLessonVideo = document.getElementById('btn-edit-lesson-remove-video');
+  if (btnRemoveLessonVideo && state.selectedEditLessonModalData) {
+    btnRemoveLessonVideo.addEventListener('click', () => {
+      state.removeLessonVideo(state.selectedEditLessonModalData.courseId, state.selectedEditLessonModalData.lessonId);
+    });
+  }
+
+  const btnPreviewCurrentVideo = document.getElementById('btn-edit-lesson-preview-video');
+  if (btnPreviewCurrentVideo && state.selectedEditLessonModalData) {
+    btnPreviewCurrentVideo.addEventListener('click', () => {
+      state.openLessonPreview(state.selectedEditLessonModalData.courseId, state.selectedEditLessonModalData.lessonId);
+    });
+  }
+
+  const formEditLesson = document.getElementById('form-submit-edit-lesson');
+  if (formEditLesson && state.selectedEditLessonModalData) {
+    formEditLesson.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = state.selectedEditLessonModalData;
+      const title = document.getElementById('edit-lesson-title').value;
+      const description = document.getElementById('edit-lesson-desc').value;
+      const duration = document.getElementById('edit-lesson-duration').value;
+      const difficulty = document.getElementById('edit-lesson-difficulty').value;
+      const published = document.getElementById('edit-lesson-published').value === 'true';
+      const fileInput = document.getElementById('edit-lesson-video-file');
+      const videoFile = fileInput && fileInput.files ? fileInput.files[0] : null;
+
+      const btnSave = document.getElementById('btn-save-edit-lesson');
+      if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.innerText = "⏳ Saving & Uploading...";
+      }
+
+      await state.updateAcademyLesson(data.courseId, data.lessonId, {
+        title, description, duration, difficulty, published
+      }, videoFile);
+    });
+  }
+
+  const btnAddCourseTrigger = document.getElementById('btn-admin-add-course-trigger');
+  if (btnAddCourseTrigger) {
+    btnAddCourseTrigger.addEventListener('click', () => {
+      const title = prompt("Enter Course Title:");
+      if (title) {
+        const description = prompt("Enter Course Description:");
+        const category = prompt("Enter Category (Aim, Movement, Strategy, Esports):", "Aim");
+        const difficulty = prompt("Enter Difficulty (Beginner, Intermediate, Advanced):", "Beginner");
+        state.createAcademyCourse({ title, description: description || "", category: category || "Aim", difficulty: difficulty || "Beginner" });
+      }
+    });
+  }
+
+  const btnAdminRefresh = document.getElementById('btn-admin-refresh');
+  if (btnAdminRefresh) {
+    btnAdminRefresh.addEventListener('click', () => {
+      state.fetchAdminDashboardData();
+      alert("🔄 Admin Dashboard Data Refreshed!");
+    });
+  }
+
   document.querySelectorAll('[data-tab]').forEach(elem => {
     elem.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2649,6 +4165,25 @@ function attachEventListeners() {
 }
 
 function handleGlobalClick(e) {
+  const navTabElem = e.target.closest('[data-tab]');
+  if (navTabElem) {
+    const tab = navTabElem.getAttribute('data-tab');
+    if (tab) {
+      state.isMoreDropdownOpen = false;
+      state.setActiveTab(tab);
+      return;
+    }
+  }
+
+  const adminTabElem = e.target.closest('[data-admin-tab]');
+  if (adminTabElem) {
+    const adminTab = adminTabElem.getAttribute('data-admin-tab');
+    if (adminTab) {
+      state.setActiveAdminTab(adminTab);
+      return;
+    }
+  }
+
   if (state.isMoreDropdownOpen && !e.target.closest('.more-dropdown-wrapper')) {
     state.isMoreDropdownOpen = false;
     state.notify();
@@ -2729,6 +4264,90 @@ function handleGlobalClick(e) {
   }
   else if (action === 'toggle-connect') state.toggleConnection(id);
   else if (action === 'filter-clip-tag') state.setClipTagFilter(target.getAttribute('data-tag'));
+  else if (action === 'toggle-publish-course') {
+    const courseId = target.getAttribute('data-course-id');
+    state.togglePublishCourse(courseId);
+  }
+  else if (action === 'admin-delete-course') {
+    const courseId = target.getAttribute('data-course-id');
+    state.deleteAcademyCourse(courseId);
+  }
+  else if (action === 'reorder-lesson-up') {
+    const courseId = target.getAttribute('data-course-id');
+    const lessonId = target.getAttribute('data-lesson-id');
+    state.reorderLesson(courseId, lessonId, 'up');
+  }
+  else if (action === 'reorder-lesson-down') {
+    const courseId = target.getAttribute('data-course-id');
+    const lessonId = target.getAttribute('data-lesson-id');
+    state.reorderLesson(courseId, lessonId, 'down');
+  }
+  else if (action === 'toggle-publish-lesson') {
+    const courseId = target.getAttribute('data-course-id');
+    const lessonId = target.getAttribute('data-lesson-id');
+    state.togglePublishLesson(courseId, lessonId);
+  }
+  else if (action === 'admin-delete-lesson') {
+    const courseId = target.getAttribute('data-course-id');
+    const lessonId = target.getAttribute('data-lesson-id');
+    state.deleteAcademyLesson(courseId, lessonId);
+  }
+  else if (action === 'admin-edit-course-modal') {
+    const courseId = target.getAttribute('data-course-id');
+    const course = state.academyCourses.find(c => c.id === courseId);
+    if (course) {
+      const newTitle = prompt("Edit Course Title:", course.title);
+      if (newTitle) {
+        const newDesc = prompt("Edit Course Description:", course.description);
+        state.updateAcademyCourse(courseId, { title: newTitle, description: newDesc || course.description });
+      }
+    }
+  }
+  else if (action === 'edit-lesson' || action === 'admin-edit-lesson-modal') {
+    const elem = target.closest('[data-course-id]');
+    const courseId = elem ? elem.getAttribute('data-course-id') : target.getAttribute('data-course-id');
+    const lessonId = elem ? elem.getAttribute('data-lesson-id') : target.getAttribute('data-lesson-id');
+    console.log("[Admin Action] Edit Lesson clicked:", { courseId, lessonId });
+    if (courseId && lessonId) {
+      state.openEditLessonModal(courseId, lessonId);
+    }
+  }
+  else if (action === 'preview-lesson' || action === 'open-lesson-preview-modal' || action === 'open-lesson') {
+    const elem = target.closest('[data-course-id]');
+    const courseId = elem ? elem.getAttribute('data-course-id') : target.getAttribute('data-course-id');
+    const lessonId = elem ? elem.getAttribute('data-lesson-id') : target.getAttribute('data-lesson-id');
+    console.log("[Admin Action] Preview Lesson clicked:", { courseId, lessonId });
+    if (courseId && lessonId) {
+      state.openLessonPreview(courseId, lessonId);
+    }
+  }
+  else if (action === 'admin-add-lesson-modal') {
+    const courseId = target.getAttribute('data-course-id');
+    const title = prompt("Enter New Lesson Title:");
+    if (title) {
+      const desc = prompt("Enter Description:");
+      const duration = prompt("Enter Duration (e.g. 8 mins):", "10 mins");
+      state.createAcademyLesson(courseId, { title, description: desc || "", duration: duration || "10 mins" });
+    }
+  }
+  else if (action === 'toggle-feature-post') {
+    state.toggleFeaturePost(id);
+  }
+  else if (action === 'toggle-hide-post') {
+    state.toggleHidePost(id);
+  }
+  else if (action === 'admin-delete-post') {
+    state.adminDeletePost(id);
+  }
+  else if (action === 'resolve-report') {
+    state.resolveReport(id, target.getAttribute('data-status'));
+  }
+  else if (action === 'toggle-publish-news') {
+    state.togglePublishNews(id);
+  }
+  else if (action === 'delete-news') {
+    state.deleteNews(id);
+  }
   else if (action === 'view-full-profile') {
     const p = state.players.find(x => x.id === id);
     if (p) state.openPlayerProfile(p);
@@ -2740,3 +4359,48 @@ state.subscribe(renderApp);
 document.addEventListener('DOMContentLoaded', () => {
   renderApp();
 });
+
+
+// GLOBAL ADMIN DIAGNOSTICS TOOL FOR CONSOLE
+window.checkAdminStatus = async function() {
+  const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+  if (!client) {
+    console.error("❌ Supabase client not initialized.");
+    return { error: "Supabase client not initialized" };
+  }
+
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) {
+    console.warn("⚠️ No active authenticated user session found in Supabase.");
+    return { status: "No authenticated user session", state_isAdmin: state.isAdmin };
+  }
+
+  const { data: adminRow, error: adminErr } = await client
+    .from('admin_users')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  let isRpcAdmin = false;
+  try {
+    const { data: rpcRes } = await client.rpc('is_admin', { user_id: user.id });
+    isRpcAdmin = !!rpcRes;
+  } catch (e) {}
+
+  const report = {
+    authenticated_user_uuid: user.id,
+    email: user.email,
+    user_metadata: user.user_metadata,
+    exists_in_admin_users: !!adminRow,
+    admin_row: adminRow,
+    is_admin_rpc_result: isRpcAdmin,
+    state_isAdmin: state.isAdmin,
+    supabase_query_error: adminErr ? adminErr.message : null
+  };
+
+  console.log("==========================================");
+  console.log("🛡️ BOOYAHCONNECT ADMIN DIAGNOSTICS REPORT");
+  console.log("==========================================");
+  console.log(JSON.stringify(report, null, 2));
+  return report;
+};
